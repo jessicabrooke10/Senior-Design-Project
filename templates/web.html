@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDP GUI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+</head>
+<body>
+    <!-- Top bar -->
+    <nav class="navbar navbar-dark bg-dark">
+        <img src="{{ url_for('static', filename='Lockheed_Martin_logo.svg') }}" width="300" class="img-fluid" alt="logo">
+    </nav>    
+    <h2 class="mt-4">Home</h2>
+    <p class="lead">Lockheed Martin SDP Homepage.</p>
+  
+    <div class="row mt-4">
+      <div class="col-md-12">
+        <p>This project is a collaborative effort between <strong>University of Connecticut (UConn) students</strong> and <strong>Lockheed Martin</strong>, aimed at harnessing the power of data science and machine learning to drive innovation in server management and operational efficiency.</p>
+        <p>Our team, comprising of very talented senior students from UConn, has been tasked with developing a suite of tools designed to analyze historical server load data provided by Lockheed Martin. The objective is to <strong>predict future server loads at specific times</strong>, enabling optimized server operation schedules. This predictive capability is crucial for reducing unnecessary server uptime, thereby <strong>saving on operational costs</strong> and enhancing system efficiency.</p>
+      </div>
+    </div>
+
+    <!-- Choose an algorithm -->
+    <div id="algorithmSelection">
+        <h2>Algorithm Analysis</h2>
+        <p>*Note: Algorithms may take a minute or so to run.*</p>
+        <form id="algorithmForm">
+            <label for="algorithm">Choose an algorithm:</label>
+            <select name="algorithm" id="algorithm">
+                <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
+                <option value="LSTMModel">LSTM Model</option>
+                <option value="ProphetModel">Prophet Model</option>
+            </select>
+            <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
+        </form>
+    </div>
+
+    <!-- Display algorithm results -->
+    <div id="plots">
+        <img id="plot_base64_1" src="" alt="">
+        <img id="plot_base64_2" src="" alt="">
+        <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
+    </div>
+    </div>
+
+    <!-- Choose a graph -->
+     <div id="graphSelection">
+        <h2>Choose a Graph</h2>
+        <form id="graphForm">
+            <label for="graph">Choose a graph:</label>
+            <select name="graph" id="graph">
+                <option value="ClusterGraph">Cluster Graph</option>
+                <option value="Graph2">Graph 2</option>
+                <option value="Graph3">Graph 3</option>
+            </select>
+            <button type="button" onclick="chooseGraph()">Choose Graph</button>
+        </form>
+    </div>
+
+    <!-- Display the result -->
+    <div id="graphresults"></div>
+    
+    <script>
+        function runAlgorithm() {
+            document.getElementById('loadingMessage').style.display = 'block';
+            // Get the selected algorithm from the dropdown
+            const selectedAlgorithm = document.getElementById('algorithm').value;
+
+            if (selectedAlgorithm === 'ProphetModel') {
+                fetch('/run-prophet', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    // Update the content of the results div based on the response from the server
+                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_prophet[0];
+                    document.getElementById('plot_base64_2').src = "data:image/png;base64," + data.plot_prophet[1];
+                    // Hide loading message
+                    document.getElementById('loadingMessage').style.display = 'none';
+                })
+                .catch(error => console.error('Error:', error));
+            }
+            if (selectedAlgorithm === 'SeasonalDecompositionModel') {
+                fetch('/run-seasonaldecomposition', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    // Update the content of the results div based on the response from the server
+                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_seasonaldecomposition;
+                    document.getElementById('plot_base64_2').src = "";
+                    // Hide loading message
+                    document.getElementById('loadingMessage').style.display = 'none';
+                })
+                .catch(error => console.error('Error:', error));
+            }
+            if (selectedAlgorithm === 'LSTMModel') {
+                fetch('/run-lstm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    // Update the content of the results div based on the response from the server
+                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_lstm;
+                    document.getElementById('plot_base64_2').src = "";
+                    // Hide loading message
+                    document.getElementById('loadingMessage').style.display = 'none';
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        function chooseGraph() {
+        // Get the selected graph from the dropdown
+        const selectedGraph = document.getElementById('graph').value;
+
+        // Check if the selected graph is "Cluster Graph"
+        if (selectedGraph === 'ClusterGraph') {
+            // Display the clustering algorithm interaction menu
+            document.getElementById('graphresults').innerHTML = `
+                <div id="clusteringAlgorithm">
+                    <h2>Interact with Clustering Algorithm</h2>
+                    <p class="instruction">Use the form below to input the day of the week for the clustering algorithm.</p>
+                    <p class="example">Example: Day: <code>monday</code></p>
+                </div>
+                <form id="clusteringForm">
+                    <label for="day">Day:</label>
+                    <input type="text" name="day" id="day" required>
+        
+                    <button type="button" onclick="runClustering()">Run Clustering</button>
+                </form>
+                <div id="clusteringResult"></div> <!-- Div to display clustering result -->
+                <img id="clusterPlot" src="data:image/png;base64,{{ plot_data }}" alt="Enter Cluster Algorithm Data">
+            `;
+        }
+    }
+
+    function runClustering() {
+        // Get form data
+        const day = document.getElementById('day').value;
+
+        // Make an AJAX request to run the clustering algorithm
+        fetch('/run-cluster-graph', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ day })
+        })
+        .then(response => response.json())
+        .then(data => {
+            const clusterPlotImg = document.getElementById('clusterPlot');
+            clusterPlotImg.src = "data:image/png;base64," + data.plot_data;
+            clusterPlotImg.alt = "Cluster Algorithm Data"; // Update alt attribute
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    </script>  
+</body>
+</html>
