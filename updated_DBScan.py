@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import matplotlib.colors as mcolors
 from tabulate import tabulate
 
-csv_file = input("Please input a csv file")
+csv_file = input("Please input a csv file ")
 
 df = pd.read_csv(csv_file)
 
