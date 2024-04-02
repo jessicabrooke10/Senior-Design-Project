@@ -4,12 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDP GUI</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://mpld3.github.io/_static/js/mpld3.v0.5.1.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <style>
+        body {
+            background-color: #f8f8f8;
+            color: #333;
+        }       
+        a {
+            color: #007bff;
+        }
+        .custom-bg-color {
+            background-color: #005BAD; 
+        }
+        /* Adjust color scheme as needed */
+        .container {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        /* Apply box shadows and borders to elements as needed */
+        button {
+            background-color: #005BAD;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #007bff;
+        }
+        /* CSS code for the table */
+        #clusterSchedule {
+            font-family: Arial, sans-serif;
+            border-collapse: collapse;
+            width: 80%;
+            margin: 0 auto;   /* Center the table horizontally */
+        }
+    
+        #clusterSchedule th, #clusterSchedule td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    
+        #clusterSchedule th {
+            background-color: #f2f2f2;
+        }
+    
+        #clusterSchedule tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    
+        #clusterSchedule tr:hover {
+            background-color: #ddd;
+        }
+    </style>
 </head>
 <body>
     <!-- Top bar -->
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-dark custom-bg-color">
         <img src="{{ url_for('static', filename='Lockheed_Martin_logo.svg') }}" width="300" class="img-fluid" alt="logo">
     </nav>    
     <h2 class="mt-4">Home</h2>
@@ -43,56 +101,73 @@
         <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
     </div>
     </div>
-
-    <!-- Clustering Algorithm -->
-     <div id="clusteringAlgorithm">
-        <h2>Clustering Algorithm</h2>
-        <p>Recommended time range is from 9:00 AM to 3:00 PM</p>
-    </div>
-    <form id="clusteringForm">
+   
+    <h2>Cluster Plot</h2>
+    <!-- Form to select clustering parameters -->
+    <form id="clusterForm">
         <label for="day">Day:</label>
         <select name="day" id="day">
-            <option value="monday">Monday</option>
-            <option value="tuesday">Tuesday</option>
-            <option value="wednesday">Wednesday</option>
-            <option value="thursday">Thursday</option>
-            <option value="friday">Friday</option>
-            <option value="saturday">Saturday</option>
-            <option value="sunday">Sunday</option>
-        </select>
-         <!-- Start time dropdown -->
-        <label for="start_time">Start Time:</label>
-        <select name="start_time" id="start_time">
-            <option value="8:00">8:00 AM</option>
-            <option value="09:00">9:00 AM</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="12:00">12:00 PM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday">Friday</option>
+            <option value="Saturday">Saturday</option>
+            <option value="Sunday">Sunday</option>
         </select>
 
-         <!-- End time dropdown -->
+        <label for="start_time">Start Time:</label>
+        <input type="time" id="start_time" name="start_time" value="09:00">
+
         <label for="end_time">End Time:</label>
-        <select name="end_time" id="end_time">
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="12:00">12:00 PM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
-            <option value="18:00">6:00 PM</option>
-        </select>
+        <input type="time" id="end_time" name="end_time" value="17:00">
+
+        <label for="data_file">Data File:</label>
+        <select name="data_file" id = "data_file">
+            <option value="hourly_aggregated_monday"> hourly_aggregated_monday</option>
+            <option value="hourly_aggregated_tuesday"> hourly_aggregated_tuesday</option>
+        </select>    
+        <label for ="threshold">Threshold:</label>
+        <input type ="text" id="threshold" name="threshold" placeholder="Recommended: 1.5"><br>
+
+        <button type="button" onclick="runClustering()">Run Clustering</button>
     </form>
-    <div id="clusteringResult"></div> <!-- Div to display clustering result -->
-    <img id="clusterPlot" src="data:image/png;base64,{{ plot_data }}">
-    
+
+    <!-- Container for the plot -->
+    <div id="clusterPlot"></div>
+
+    <!-- Container for the schedule -->
+    <div id="clusterSchedule"></div>
+
+
+</div>
     <script>
+        function runClustering() {
+            // Get form data
+            const day = document.getElementById('day').value;
+            const start_time = document.getElementById('start_time').value;
+            const end_time = document.getElementById('end_time').value;
+            const data_file = document.getElementById('data_file').value;
+            const threshold = document.getElementById('threshold').value;
+            // Make a POST request to the server to run clustering
+            fetch('/run-cluster-graph', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ day, start_time, end_time, data_file, threshold})
+            })
+            .then(response => response.json())
+            .then(data => {
+                Plotly.newPlot('clusterPlot', JSON.parse(data.plot_data));
+                document.getElementById('clusterSchedule').innerHTML = data.schedule_html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+        <script>
         function runAlgorithm() {
             document.getElementById('loadingMessage').style.display = 'block';
             // Get the selected algorithm from the dropdown
@@ -153,37 +228,6 @@
                 .catch(error => console.error('Error:', error));
             }
         } 
-
-    function runClustering() {
-        // Get form data
-        const day = document.getElementById('day').value;
-        const start_time = document.getElementById('start_time').value;
-        const end_time = document.getElementById('end_time').value;
-
-        // Make an AJAX request to run the clustering algorithm
-        fetch('/run-cluster-graph', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ day, start_time, end_time })
-        })
-        .then(response => response.json())
-        .then(data => {
-            const clusterPlotImg = document.getElementById('clusterPlot');
-            clusterPlotImg.src = "data:image/png;base64," + data.plot_data;
-            clusterPlotImg.alt = "Cluster Algorithm Data"; // Update alt attribute
-
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    }
-        // Event listener to run clustering when day selection changes
-    document.getElementById('day').addEventListener('change', runClustering);
-    document.getElementById('start_time').addEventListener('change', runClustering);
-    document.getElementById('end_time').addEventListener('change', runClustering);
-    runClustering();
-    </script>  
+</script>
 </body>
 </html>

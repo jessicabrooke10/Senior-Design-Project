@@ -31,9 +31,9 @@ app = Flask(__name__)
 chunksize = 100000
 
 # Generate Cluster Plot
-def generate_plot(day, start_time, end_time):
-    # Read chosen day of the week file
-    df = pd.read_csv("days/hourly_aggregated_"+ day +".csv")
+def generate_plot(day, start_time, end_time, data_file, threshold):
+    
+    df = pd.read_csv(data_file + ".csv")
     
     # Change time columns to datetime format
     df['_time'] = pd.to_datetime(df['_time'])
@@ -57,7 +57,7 @@ def generate_plot(day, start_time, end_time):
     clustering = DBSCAN(eps=eps_value, min_samples=groups).fit(DBSCAN_data)
     DBSCAN_dataset = DBSCAN_data.copy()
     DBSCAN_dataset.loc[:,'Cluster'] = clustering.labels_ 
-
+         
     # Group the data by cluster and calculate cluster-level statistics
     cluster_stats = DBSCAN_dataset[DBSCAN_dataset['Cluster']!=-1].groupby('Cluster').agg({
         'CPU_95th_Perc': ['min', 'max', 'mean', 'median', 'std']
@@ -81,6 +81,20 @@ def generate_plot(day, start_time, end_time):
 
     # Create a Plotly Figure object
     fig = go.Figure()
+    
+    custom_palette = [
+    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', 
+    '#ff5733', '#ff1493', '#40e0d0', '#ffc0cb', '#ff8c00', '#4682b4', '#9acd32', '#ff8c00', 
+    '#9400d3', '#9932cc', '#008080', '#00ff7f', '#87ceeb', '#f08080', '#ffa07a', '#ffa500', 
+    '#ff4500', '#ff6347', '#8a2be2', '#7b68ee', '#6495ed', '#4169e1', '#191970', '#00bfff', 
+    '#1e90ff', '#00ffff', '#00ced1', '#20b2aa', '#008b8b', '#7fffd4', '#afeeee', '#40e0d0', 
+    '#7fff00', '#adff2f', '#228b22', '#32cd32', '#556b2f', '#008000', '#006400',
+    '#800000', '#a52a2a', '#deb887', '#5f9ea0', '#7fff00', '#d2691e', '#ff7f50', '#6495ed', 
+    '#fff8dc', '#dc143c', '#00ffff', '#00008b', '#008b8b', '#b8860b', '#a9a9a9', '#006400', 
+    '#bdb76b', '#8b008b', '#556b2f', '#ff8c00', '#9932cc', '#8b0000', '#e9967a', '#8fbc8f', 
+    '#483d8b', '#2f4f4f', '#2f4f4f', '#00ced1', '#9400d3', '#ff1493', '#00bfff', '#696969', 
+    '#696969', '#1e90ff', '#b22222', '#fffaf0', '#228b22', '#ff00ff', '#dcdcdc', '#f8f8ff'
+]
 
     # Iterate over unique cluster IDs
     for cluster_id in set(cluster_labels):
@@ -91,13 +105,14 @@ def generate_plot(day, start_time, end_time):
         y_cluster = cluster_data['CPU_95th_Perc']
         hover_text_cluster = hover_text[cluster_id]  # Generate hover text for the current cluster
         
+
         # Add scatter trace for the current cluster
         fig.add_trace(go.Scatter(
             x=x_cluster,
             y=y_cluster,
             mode='markers',
             name=f'Cluster: {cluster_id}',
-            marker=dict(color=np.random.rand(3,)),
+            marker=dict(color=custom_palette[cluster_id]),
             hovertext=hover_text_cluster  # Specify hover text for each data point in the current cluster
         ))
 
@@ -105,7 +120,9 @@ def generate_plot(day, start_time, end_time):
     fig.update_layout(
         title='CPU 95th Percentile Over Time - '+ day,
         xaxis_title="Time",
-        yaxis_title="CPU %"
+        yaxis_title="CPU %",
+        plot_bgcolor='#f8f8f8',  # Set the background color
+        paper_bgcolor='#f8f8f8'  # Set the background color
     )
     x_data = DBSCAN_dataset[DBSCAN_dataset['Cluster']!=-1]['_time']
     #change times back from seconds to HH:MM format
@@ -116,20 +133,53 @@ def generate_plot(day, start_time, end_time):
             ticktext=[pd.to_datetime(t, unit='s').strftime('%H:%M') for t in x_data]  # Convert tick values to HH:MM format
             )
         )
-    image_bytes = pio.to_image(fig, format='png')
-    plot_base64 = base64.b64encode(image_bytes).decode('utf-8')
-    return plot_base64
+    plot_json = fig.to_json()
+
+    # determine schedule
+    threshold = float(threshold)
+    schedule = pd.DataFrame(columns=['Server', 'Status', 'Time'])
+    schedule.reset_index(drop=True, inplace=True)
+    for cluster_id in set(cluster_labels):
+        stats = cluster_stats.loc[cluster_id]
+        cluster_df = DBSCAN_dataset[DBSCAN_dataset['Cluster'] == cluster_id]
+
+        time_value = cluster_df['_time'].iloc[0]
+        datetime_obj = pd.to_datetime(time_value, unit='s')
+        formatted_time = datetime_obj.strftime('%H:%M')
+        pd.to_datetime(time_value, unit='s').strftime('%H:%M')
+
+        new_server = "group " + str(cluster_id)
+        new_time = str(formatted_time)
+
+        if stats["CPU_95th_Perc", "median"].round(2) >= threshold:
+            new_status = 'On'
+            #print(str(cluster_id) + " should be on at " + str(formatted_time))
+        else:
+            new_status = 'Off'
+            #print(str(cluster_id) + " should be off at " + str(formatted_time))
+
+        new_row = pd.DataFrame({'Server': [new_server], 'Status': [new_status], 'Time': [formatted_time]})
+    
+        # Append the new row to the schedule DataFrame
+        schedule = pd.concat([schedule, new_row], ignore_index=True)
+        # Pivot the DataFrame to display in wide format
+    schedule_pivot = schedule.pivot_table(index='Time', columns='Server', values='Status', aggfunc='first')
+
+    schedule_pivot.fillna("Never Used", inplace=True)
+
+    schedule_html = schedule_pivot.to_html()
+    return plot_json, schedule_html
 
 # Generate Prophet Plots
 def generate_prophet():
     # Load the CSV file
     data = pd.read_csv("aggregated2.csv", header=None, names=['ds', 'y'])
-
+ 
     # Convert the 'ds' column to datetime format
     data['ds'] = pd.to_datetime(data['ds'])
 
     # Initialize the Prophet model
-    model = Prophet()
+    model = Prophet() 
 
     # Fit the model with the data
     model.fit(data)
@@ -142,10 +192,10 @@ def generate_prophet():
 
     # Plot the forecast
     fig1 = model.plot(forecast)
-
+    fig1.patch.set_facecolor('#f8f8f8') 
     # Plot components
     fig2 = model.plot_components(forecast)
-
+    fig2.patch.set_facecolor('#f8f8f8') 
     # Create BytesIO objects to store plot image data
     plot_io1 = BytesIO()
     plot_io2 = BytesIO()
@@ -188,6 +238,7 @@ def generate_seasonaldecomposition():
     stream = dataframe._append(forecast_series)
     
     # Plot the entire stream with a single color
+    fig, ax = plt.subplots()
     plt.plot(stream, color="black")
 
     # Overwrite the color of the last 7 points
@@ -197,6 +248,7 @@ def generate_seasonaldecomposition():
     plt.axvline(x=last_timestamp, color='orange', label='Transition from data to forecast')
     plt.legend()
     plt.title('Original Data vs Forecast')
+    fig.patch.set_facecolor('#f8f8f8')
 
     # Create BytesIO object to store plot image data
     plot_io = BytesIO()
@@ -290,7 +342,7 @@ def generate_lstm():
     mse = mean_squared_error(scaler.inverse_transform(y_test.reshape(-1, 1)), y_pred_trans)
     rmse = np.sqrt(mse)
 
-    plt.figure(figsize=(15, 6))
+    plt.figure(figsize=(15, 6), facecolor='#f8f8f8')
     plt.plot(timestamps[split + sequence_length:], y_pred_trans, label='Predicted')
     plt.plot(timestamps[split + sequence_length:], scaler.inverse_transform(y_test.reshape(-1, 1)).flatten(), label='Real')
     plt.xlabel('Timestamp')
@@ -353,12 +405,14 @@ def run_cluster_graph():
         day = request.json.get('day')
         start_time = request.json.get('start_time')
         end_time = request.json.get('end_time')
-        plot_data = generate_plot(day, start_time, end_time)
-        return jsonify({'plot_data': plot_data})
+        data_file = request.json.get('data_file')
+        threshold = request.json.get('threshold')
+        plot_data, schedule_html = generate_plot(day, start_time, end_time, data_file, threshold)
+        return jsonify({'plot_data': plot_data, 'schedule_html': schedule_html})
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
     return render_template('web.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)      
+    app.run(debug=True)    
