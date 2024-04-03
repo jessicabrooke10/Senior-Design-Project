@@ -34,6 +34,43 @@ chunksize = 100000
 def generate_plot(day, start_time, end_time, data_file, threshold):
     
     df = pd.read_csv(data_file + ".csv")
+
+    df = df[df['CPU_95th_Perc'] != 0]
+    df = df.dropna(subset=["CPU_95th_Perc"])
+
+    df['CPU_95th_Perc'] = np.log1p(df['CPU_95th_Perc'])
+
+    time_strings = df['_time'].str.extract(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+\+\d{2}:\d{2})')
+    df['_time'] = pd.to_datetime(time_strings[0], format='%Y-%m-%dT%H:%M:%S.%f%z', utc=True)
+
+    day_dataframes = {i: [] for i in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']}
+
+    for index, row in df.iterrows():
+        host = row['host']
+        timestamp = row['_time']
+        value = row['CPU_95th_Perc']
+        day_of_week = pd.to_datetime(timestamp).day_name()
+        day_dataframes[day_of_week].append([host, timestamp, value])
+
+    for i, data_list in day_dataframes.items():
+        day_df = pd.DataFrame(data_list, columns=['host', '_time', 'CPU_95th_Perc'])
+        day_df['_time'] = pd.to_datetime(day_df['_time'])
+        day_df['_time'] = day_df['_time'].dt.time
+        day_df.to_csv(f'days/{i.lower()}_data.csv', index=False)
+
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+
+    df = df[['host', '_time', 'CPU_95th_Perc']]
+    for i in days:
+        df = pd.read_csv(f'days/{i}_data.csv')
+        df['_time'] = pd.to_datetime(df['_time'], format="%H:%M:00")
+        df.set_index('_time', inplace=True)
+        hourly_df = df.groupby('host').resample('1H').mean()
+        hourly_df.reset_index(inplace=True)
+        hourly_df.dropna(subset=['CPU_95th_Perc'], inplace=True)
+        hourly_df.to_csv('days/hourly_aggregated_'+i+'.csv', index=False)
+
+    df = pd.read_csv("days/hourly_aggregated_"+day+".csv")
     
     # Change time columns to datetime format
     df['_time'] = pd.to_datetime(df['_time'])
@@ -52,7 +89,7 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
     DBSCAN_data = df[['_time', 'CPU_95th_Perc']]
 
     # Run DBScan algorithm on above columns
-    eps_value = 6
+    eps_value = 0.23
     groups = 2
     clustering = DBSCAN(eps=eps_value, min_samples=groups).fit(DBSCAN_data)
     DBSCAN_dataset = DBSCAN_data.copy()
@@ -77,7 +114,7 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
         count = cluster_counts.get(cluster_id, 0)
         
         # Append hover text for the current cluster
-        hover_text.append(f'Cluster: {cluster_id} <br> CPU Min: {stats["CPU_95th_Perc", "min"].round(2)} <br> CPU Max: {stats["CPU_95th_Perc", "max"].round(2)} <br> CPU Mean: {stats["CPU_95th_Perc", "mean"].round(2)} <br> CPU Median: {stats["CPU_95th_Perc", "median"].round(2)} <br> CPU STD: {stats["CPU_95th_Perc", "std"].round(2)} <br> Count: {count}')
+        hover_text.append(f'Cluster: {cluster_id} <br> CPU Min: {stats["CPU_95th_Perc", "min"].round(2)} <br> CPU Max: {stats["CPU_95th_Perc", "max"].round(2)} <br> CPU Mean: {stats["CPU_95th_Perc", "mean"].round(2)} <br> CPU Median: {stats["CPU_95th_Perc", "median"].round(2)} <br> Count: {count}')
 
     # Create a Plotly Figure object
     fig = go.Figure()
@@ -139,6 +176,7 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
     threshold = float(threshold)
     schedule = pd.DataFrame(columns=['Server', 'Status', 'Time'])
     schedule.reset_index(drop=True, inplace=True)
+
     for cluster_id in set(cluster_labels):
         stats = cluster_stats.loc[cluster_id]
         cluster_df = DBSCAN_dataset[DBSCAN_dataset['Cluster'] == cluster_id]
@@ -149,14 +187,11 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
         pd.to_datetime(time_value, unit='s').strftime('%H:%M')
 
         new_server = "group " + str(cluster_id)
-        new_time = str(formatted_time)
 
         if stats["CPU_95th_Perc", "median"].round(2) >= threshold:
             new_status = 'On'
-            #print(str(cluster_id) + " should be on at " + str(formatted_time))
         else:
             new_status = 'Off'
-            #print(str(cluster_id) + " should be off at " + str(formatted_time))
 
         new_row = pd.DataFrame({'Server': [new_server], 'Status': [new_status], 'Time': [formatted_time]})
     
@@ -388,16 +423,6 @@ def choose_graph():
     if request.method == 'POST':
         graph = request.json.get('graph')
         return jsonify({'graph': graph})
-    
-def convert_to_lists(obj):
-        if isinstance(obj, dict):
-            return {k: convert_to_lists(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [convert_to_lists(item) for item in obj]
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return obj
         
 @app.route('/run-cluster-graph', methods=['POST'])
 def run_cluster_graph():

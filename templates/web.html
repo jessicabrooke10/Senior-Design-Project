@@ -43,7 +43,9 @@
         #clusterSchedule {
             font-family: Arial, sans-serif;
             border-collapse: collapse;
-            width: 80%;
+            width: 1000px; /* Set width in pixels */
+            height: 800px; /* Set height in pixels */
+            overflow: auto;
             margin: 0 auto;   /* Center the table horizontally */
         }
     
@@ -63,6 +65,9 @@
     
         #clusterSchedule tr:hover {
             background-color: #ddd;
+        }
+        .indented {
+        margin-left: 20px; /* Adjust the margin as needed */
         }
     </style>
 </head>
@@ -85,51 +90,77 @@
             <li class="nav-item">
                 <a class="nav-link" id="graph-tab" data-toggle="tab" href="#cluster1" role="tab" aria-controls="cluster1" aria-selected="false">Cluster Plot</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" id="about-tab" data-toggle="tab" href="#about1" role="tab" aria-controls="about1" aria-selected="false">About</a>
+            </li>
         </ul>
 
         <!-- Tab panes -->
-        <div class="tab-content" id="myTabContent">
-            <!-- Home tab content -->
-            <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
-                <h2>Home</h2>
-                <p class="lead">Lockheed Martin SDP Homepage.</p>
-                <div class="row">
-                    <div class="col-md-12">
-                        <p>This project is a collaborative effort between <strong>University of Connecticut (UConn) students</strong> and <strong>Lockheed Martin</strong>, aimed at harnessing the power of data science and machine learning to drive innovation in server management and operational efficiency.</p>
+    <div class="tab-content" id="myTabContent">
+        <!-- Home tab content -->
+        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+            <h2>Home</h2>
+            <p class="lead"><strong>Lockheed Martin SDP Homepage</strong></p>
+            <div class="row">
+                <div class="col-md-12">
+                    <p>This project is a collaborative effort between <strong>University of Connecticut (UConn) students</strong> and <strong>Lockheed Martin</strong>, aimed at harnessing the power of data science and machine learning to drive innovation in server management and operational efficiency.</p>
+                </div>
+            </div>
+            <p class="lead"><strong>Description of Problem</strong></p>
+            <div class="row">
+                <div class="col-md-12">
+                    <p>Team 16 was tasked with finding an atypical approach for powering off compute resources when not in use in order to save Lockheed Martin millions of dollars or more. The challenge here is the ability to accurately predict, in a repeatable fashion, when a compute resource is not being used, turning it off and eliminating the need to pay for it.</p>
+                    <p>Therefore, we will need to use machine learning models and algorithms to find the optimal compute running time at an efficient cost for each unique workload. The goal is to not impede productivity while at the same time ensuring resources are not going unused.</p>
+                </div>
+            </div>
+            <p class="lead"><strong>Solutions</strong></p>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="models_sol">
+                        <p>Machine Learning Models:</p>
+                        <p class="indented">Seasonal Decomposition Model: *description*</p>
+                        <p class="indented">Long Short-Term Memory (LSTM) Model: *description*</p>
+                        <p class="indented">Prophet Model: *description*</p>
+                    </div>
+                    <div class="cluster_sol">
+                        <p>Clustering Algorithm:</p>
+                        <p class="indented">DBScan:*description*</p>
                     </div>
                 </div>
             </div>
-            <!-- Algorithm tab content -->
-            <div class="tab-pane fade" id="algorithm1" role="tabpanel" aria-labelledby="algorithm-tab">
-                <h2>Algorithm Analysis</h2>
-                <!-- Include content for algorithm analysis here -->
-                <!-- This could include forms, buttons, and other elements -->
-                <!-- Choose an algorithm -->
-                <div id="algorithmSelection">
-                    <p>*Note: Algorithms may take a minute or so to run.*</p>
-                    <form id="algorithmForm">
-                        <label for="algorithm">Choose an algorithm:</label>
-                        <select name="algorithm" id="algorithm">
-                            <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
-                            <option value="LSTMModel">LSTM Model</option>
-                            <option value="ProphetModel">Prophet Model</option>
-                        </select>
-                        <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
-                    </form>
-                </div>
-
-                <!-- Display algorithm results -->
-                <div id="plots">
-                    <img id="plot_base64_1" src="" alt="">
-                    <img id="plot_base64_2" src="" alt="">
-                    <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
-                </div>
+        </div>
+        <!-- Algorithm tab content -->
+        <div class="tab-pane fade" id="algorithm1" role="tabpanel" aria-labelledby="algorithm-tab">
+            <h2>Algorithm Analysis</h2>
+            <!-- Include content for algorithm analysis here -->
+            <!-- This could include forms, buttons, and other elements -->
+            <!-- Choose an algorithm -->
+            <div id="algorithmSelection">
+                <p>*Note: Algorithms may take a minute or so to run.*</p>
+                <form id="algorithmForm">
+                    <label for="algorithm">Choose an algorithm:</label>
+                    <select name="algorithm" id="algorithm">
+                        <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
+                        <option value="LSTMModel">LSTM Model</option>
+                        <option value="ProphetModel">Prophet Model</option>
+                    </select>
+                    <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
+                </form>
             </div>
-            <!-- Cluster Plot tab content -->
-            <div class="tab-pane fade" id="cluster1" role="tabpanel" aria-labelledby="cluster-tab">
-                <h2>Cluster Plot</h2>
-                <!-- Form to select clustering parameters -->
-                <form id="clusterForm">
+
+            <!-- Display algorithm results -->
+            <div id="plots">
+                <img id="plot_base64_1" src="" alt="">
+                <img id="plot_base64_2" src="" alt="">
+                <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
+            </div>
+        </div>
+        <!-- Cluster Plot tab content -->
+        <div class="tab-pane fade" id="cluster1" role="tabpanel" aria-labelledby="cluster-tab">
+            <h2>Cluster Plot</h2>
+            <!-- Form to select clustering parameters -->
+            <form id="clusterForm">
+                <div class="input-row">
                     <label for="day">Day:</label>
                     <select name="day" id="day">
                         <option value="Monday">Monday</option>
@@ -140,34 +171,56 @@
                         <option value="Saturday">Saturday</option>
                         <option value="Sunday">Sunday</option>
                     </select>
-                    
+                
                     <label for="start_time">Start Time:</label>
-                    <input type="time" id="start_time" name="start_time" value="09:00">
+                    <input type="time" id="start_time" name="start_time" min="00:00" max="23:00" step="3600" value="09:00" onchange="validateTime()">
 
                     <label for="end_time">End Time:</label>
-                    <input type="time" id="end_time" name="end_time" value="17:00">
-
+                    <input type="time" id="end_time" name="end_time" min="00:00" max="23:00" step="3600" value="17:00" onchange="validateTime()">
+                </div>
+                <script>
+                    function validateTime() {
+                        var startTime = document.getElementById("start_time").value;
+                        var endTime = document.getElementById("end_time").value;
+            
+                        if (startTime && endTime) {
+                            if (startTime >= endTime) {
+                                alert("End time must be after the start time.");
+                                document.getElementById("end_time").value = ""; // Clear the end time value
+                            }
+                        }
+                    }
+                </script>
+                <div class="input-row">
                     <label for="data_file">Data File:</label>
                     <select name="data_file" id="data_file">
-                        <option value="hourly_aggregated_monday">hourly_aggregated_monday</option>
-                        <option value="hourly_aggregated_tuesday">hourly_aggregated_tuesday</option>
+                        <option value="exportforuconn">exportforuconn</option>
+                        <option value="placeholder">placeholder</option>
                     </select>
                     <label for="threshold">Threshold:</label>
-                    <input type="text" id="threshold" name="threshold" placeholder="Recommended: 1.5"><br>
+                    <input type="text" id="threshold" name="threshold" value="1.5"><br>
+                </div>
+                <button type="button" onclick="runClustering()">Run Clustering</button>
+            </form>
 
-                    <button type="button" onclick="runClustering()">Run Clustering</button>
-                </form>
+            <!-- Container for the plot -->
+            <div id="clusterPlot"></div>
+            <!-- Container for the schedule -->
 
-                <!-- Container for the plot -->
-                <div id="clusterPlot"></div>
-
-                <!-- Container for the schedule -->
-                <div id="clusterSchedule"></div>
-            </div>
+            <h2 id="scheduleHeader" style="display: none;">Schedule</h2>
+            <div id="clusterSchedule" ></div>
         </div>
+        <!-- About tab content -->
+        <div class="tab-pane fade" id="about1" role="tabpanel" aria-labelledby="about-tab">
+            <h2>About</h2>
+            <p>Our Team:</p>
+        </div>
+    </div>
+    
     </div>
     <script>
         function runClustering() {
+            document.getElementById('clusterPlot').innerHTML = '<p>Loading...</p>';
             // Get form data
             const day = document.getElementById('day').value;
             const start_time = document.getElementById('start_time').value;
@@ -184,7 +237,9 @@
             })
             .then(response => response.json())
             .then(data => {
+                document.getElementById('clusterPlot').innerHTML = '';
                 Plotly.newPlot('clusterPlot', JSON.parse(data.plot_data));
+                document.getElementById('scheduleHeader').style.display = 'block';
                 document.getElementById('clusterSchedule').innerHTML = data.schedule_html;
             })
             .catch(error => {
