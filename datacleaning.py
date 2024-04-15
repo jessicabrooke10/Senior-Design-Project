@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
 
-df = pd.read_csv('export.csv')
-df = df.fillna(0)
-def averaging():
+
+def averaging(df):
+    df = df.fillna(0)
     timestamps = {}
     for index, row in df.iterrows():
         if row["host"] in timestamps:
@@ -12,19 +12,22 @@ def averaging():
             timestamps[row["host"]] = [row["CPU_95th_Perc"]]
     count = 0
     inactives = set()
-    with open("average_cpus.csv","a") as f:
+    with open("average_cpus_andy.csv","a") as f:
         for k,v in timestamps.items():
             timestamps[k] = np.mean(v)
-            ln = str(k[0:10])+","+str(timestamps[k]) + "\n"
-            f.write(ln)
-            if timestamps[k] ==0:
+            #ln = str(k[0:10])+","+str(timestamps[k]) + "\n"
+            #f.write(ln)
+            if timestamps[k] <= .1:
                 inactives.add(k)
                 count+=1
-    print(f"Number of servers with 0 cpu utilization:{count}/{286}")
+    #print(f"Number of servers with 0 cpu utilization:{count}/{286}")
     return inactives
-def aggregate():
+
+    
+def aggregate(df):
+    df = df.fillna(0)
     timestamps = {}
-    inactives = averaging()
+    inactives = averaging(df)
     for index, row in df.iterrows():
         if(row["host"] in inactives):
             continue
@@ -33,13 +36,13 @@ def aggregate():
         else:
             timestamps[row["_time"] ] = [row["CPU_95th_Perc"]]
 
-    with open("aggregated_clean.csv","a") as f:
+    with open("aggregated_clean_andy.csv","a") as f:
+        f.write("time,95th\n")
         for k,v in timestamps.items():
             timestamps[k] = np.mean(v)
             ln = str(k[0:16])+","+str(timestamps[k]) + "\n"
             f.write(ln)
     return
 
-aggregate()
 
     
