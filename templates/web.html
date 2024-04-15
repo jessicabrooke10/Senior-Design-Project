@@ -26,6 +26,20 @@
             border-radius: 8px;
             border: 1px solid #ddd;
         }
+        .person {
+            width: 300px;
+            margin: 20px;
+            text-align: center;
+        }
+
+        .person img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
         /* Apply box shadows and borders to elements as needed */
         button {
             background-color: #005BAD;
@@ -66,9 +80,66 @@
         #clusterSchedule tr:hover {
             background-color: #ddd;
         }
-        .indented {
-        margin-left: 20px; /* Adjust the margin as needed */
+        #algSchedule {
+            font-family: Arial, sans-serif;
+            border-collapse: collapse;
+            width: 1000px; /* Set width in pixels */
+            height: 800px; /* Set height in pixels */
+            overflow: auto;
+            margin: 0 auto;   /* Center the table horizontally */
         }
+    
+        #algSchedule th, #algSchedule td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    
+        #algSchedule th {
+            background-color: #f2f2f2;
+        }
+    
+        #algSchedule tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    
+        #algSchedule tr:hover {
+            background-color: #ddd;
+        }
+        #clusterResults {
+            font-family: Arial, sans-serif;
+            border-collapse: collapse;
+            width: 1000px; /* Set width in pixels */
+            height: 800px; /* Set height in pixels */
+            overflow: auto;
+            margin: 0 auto;   /* Center the table horizontally */
+        }
+    
+        #clusterResults th, #clusterResults td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+    
+        #clusterResults th {
+            background-color: #f2f2f2;
+        }
+    
+        #clusterResults tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+    
+        #clusterResults tr:hover {
+            background-color: #ddd;
+        }
+        #clusterPlot {
+        width: 1000px; 
+        }
+        .indented {
+            font-size: 14px;
+            margin-left: 20px; /* Adjust the margin as needed */
+        }
+
     </style>
 </head>
 <body>
@@ -96,160 +167,425 @@
         </ul>
 
         <!-- Tab panes -->
-    <div class="tab-content" id="myTabContent">
-        <!-- Home tab content -->
-        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
-            <h2>Home</h2>
-            <p class="lead"><strong>Lockheed Martin SDP Homepage</strong></p>
-            <div class="row">
-                <div class="col-md-12">
-                    <p>This project is a collaborative effort between <strong>University of Connecticut (UConn) students</strong> and <strong>Lockheed Martin</strong>, aimed at harnessing the power of data science and machine learning to drive innovation in server management and operational efficiency.</p>
-                </div>
-            </div>
-            <p class="lead"><strong>Description of Problem</strong></p>
-            <div class="row">
-                <div class="col-md-12">
-                    <p>Team 16 was tasked with finding an atypical approach for powering off compute resources when not in use in order to save Lockheed Martin millions of dollars or more. The challenge here is the ability to accurately predict, in a repeatable fashion, when a compute resource is not being used, turning it off and eliminating the need to pay for it.</p>
-                    <p>Therefore, we will need to use machine learning models and algorithms to find the optimal compute running time at an efficient cost for each unique workload. The goal is to not impede productivity while at the same time ensuring resources are not going unused.</p>
-                </div>
-            </div>
-            <p class="lead"><strong>Solutions</strong></p>
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="models_sol">
-                        <p>Machine Learning Models:</p>
-                        <p class="indented">Seasonal Decomposition Model: *description*</p>
-                        <p class="indented">Long Short-Term Memory (LSTM) Model: *description*</p>
-                        <p class="indented">Prophet Model: *description*</p>
+        <div class="tab-content" id="myTabContent">
+            <!-- Home tab content -->
+            <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                <div class="row">
+                    <div class="col-lg-1.5">
+                        <ul class="nav flex-column" id="homeSideTabs">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="area1-tab" data-toggle="tab" href="#area1" role="tab" aria-controls="area1" aria-selected="true">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="area2-tab" data-toggle="tab" href="#area2" role="tab" aria-controls="area2" aria-selected="false">Problem</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="area3-tab" data-toggle="tab" href="#area3" role="tab" aria-controls="area3" aria-selected="false">How it Works</a>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="cluster_sol">
-                        <p>Clustering Algorithm:</p>
-                        <p class="indented">DBScan:*description*</p>
+
+                    <div class="col-lg-0.5"></div> <!-- Empty column to offset for side tabs -->
+                    <div class="col-lg-9">
+                        <div class="tab-content" id="homeTabContent">
+                            <!-- Area 1 content -->
+                            <div class="tab-pane fade show active" id="area1" role="tabpanel" aria-labelledby="area1-tab">
+                                <h2>Home</h2>
+                                <p class="lead"><strong>Lockheed Martin SDP Homepage</strong></p>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p>This project is a collaborative effort between <strong>University of Connecticut (UConn) students</strong> and <strong>Lockheed Martin</strong>, aimed at harnessing the power of data science and machine learning to drive innovation in server management and operational efficiency.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Area 2 content -->
+                            <div class="tab-pane fade" id="area2" role="tabpanel" aria-labelledby="area2-tab">
+                                <h2>Problem</h2>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p>Team 16 was tasked with finding an atypical approach for powering off compute resources when not in use in order to save Lockheed Martin millions of dollars or more. The challenge here is the ability to accurately predict, in a repeatable fashion, when a compute resource is not being used, turning it off and eliminating the need to pay for it.</p>
+                                        <p>Therefore, we will need to use machine learning models and algorithms to find the optimal compute running time at an efficient cost for each unique workload. The goal is to not impede productivity while at the same time ensuring resources are not going unused.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Area 3 content -->
+                            <div class="tab-pane fade" id="area3" role="tabpanel" aria-labelledby="area3-tab">
+                                <h2>How it Works</h2>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><strong>Algorithm Analysis Tab</strong></p>
+                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph which predicts CPU usage of every server at specified times. Next it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
+                                            The way this works is if the predicted CPU usage at a certain time is under the threshold, the server will be turned off, otherwise it will be turned on. To help the user choose a threshold value, we prepopulated the input value with the median of all predicted CPU values that the models came up with. 
+                                            As the threshold changes so does the schedule. Lastly, the user may be able to input a CSV file so we may come up with different schedules based on the information provided. </p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><strong>Cluster Tab</strong></p>
+                                        <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, and an end time. Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
+                                            group together servers based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next based on these groupings a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
+                                            To help the user choose a threshold value, we prepopulated the input with the median values across all clusters. Using the threshold value the schedule will either turn on the group of servers if their CPU percentage is higher than the threshold or turn it off otherwise. Lastly, since
+                                            the clustering algorithm groups servers together, to find the specific server in each group you can select the group number and a table will display the server belonging to that group.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><strong>About Tab</strong></p>
+                                        <p>
+                                            Click on the about tab to find out more about our group and project details.
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div> <!-- Area 3 ends -->
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <!-- Algorithm tab content -->
-        <div class="tab-pane fade" id="algorithm1" role="tabpanel" aria-labelledby="algorithm-tab">
-            <h2>Algorithm Analysis</h2>
-            <!-- Include content for algorithm analysis here -->
-            <!-- This could include forms, buttons, and other elements -->
-            <!-- Choose an algorithm -->
-            <div id="algorithmSelection">
-                <p>*Note: Algorithms may take a minute or so to run.*</p>
-                <form id="algorithmForm">
-                    <label for="algorithm">Choose an algorithm:</label>
-                    <select name="algorithm" id="algorithm">
-                        <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
-                        <option value="LSTMModel">LSTM Model</option>
-                        <option value="ProphetModel">Prophet Model</option>
-                    </select>
-                    <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
-                </form>
             </div>
 
-            <!-- Display algorithm results -->
-            <div id="plots">
-                <img id="plot_base64_1" src="" alt="">
-                <img id="plot_base64_2" src="" alt="">
-                <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
-            </div>
+    <!-- Algorithm tab content -->
+    <div class="tab-pane fade" id="algorithm1" role="tabpanel" aria-labelledby="algorithm-tab">
+        <h2>Algorithm Analysis</h2>
+        <!-- Include content for algorithm analysis here -->
+        <!-- This could include forms, buttons, and other elements -->
+        <!-- Choose an algorithm -->
+        <div id="algorithmSelection">
+            <p>*Note: Algorithms may take a minute or so to run.*</p>
+            <form id="algorithmForm">
+                <label for="algorithm">Choose an algorithm:</label>
+                <select name="algorithm" id="algorithm">
+                    <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
+                    <option value="LSTMModel">LSTM Model</option>
+                    <option value="ProphetModel">Prophet Model</option>
+                </select>
+                <label for="data_file">Data File:</label>
+                <select name="data_file" id="data_file">
+                    <option value="exportforuconn">exportforuconn</option>
+                    <option value="exportforuconn2">exportforuconn2</option>
+                </select>
+                <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
+            </form>
         </div>
-        <!-- Cluster Plot tab content -->
-        <div class="tab-pane fade" id="cluster1" role="tabpanel" aria-labelledby="cluster-tab">
-            <h2>Cluster Plot</h2>
-            <!-- Form to select clustering parameters -->
-            <form id="clusterForm">
-                <div class="input-row">
-                    <label for="day">Day:</label>
-                    <select name="day" id="day">
-                        <option value="Monday">Monday</option>
-                        <option value="Tuesday">Tuesday</option>
-                        <option value="Wednesday">Wednesday</option>
-                        <option value="Thursday">Thursday</option>
-                        <option value="Friday">Friday</option>
-                        <option value="Saturday">Saturday</option>
-                        <option value="Sunday">Sunday</option>
-                    </select>
-                
-                    <label for="start_time">Start Time:</label>
-                    <input type="time" id="start_time" name="start_time" min="00:00" max="23:00" step="3600" value="09:00" onchange="validateTime()">
 
-                    <label for="end_time">End Time:</label>
-                    <input type="time" id="end_time" name="end_time" min="00:00" max="23:00" step="3600" value="17:00" onchange="validateTime()">
-                </div>
-                <script>
-                    function validateTime() {
-                        var startTime = document.getElementById("start_time").value;
-                        var endTime = document.getElementById("end_time").value;
-            
-                        if (startTime && endTime) {
-                            if (startTime >= endTime) {
-                                alert("End time must be after the start time.");
-                                document.getElementById("end_time").value = ""; // Clear the end time value
-                            }
+        <!-- Display algorithm results -->
+        <div id="plots">
+            <div id="loadingMessage" style="display: none;">Loading...</div> <!-- Loading message -->
+            <img id="plot_base64_1" src="" alt="">
+            <img id="plot_base64_2" src="" alt="">
+        </div>
+
+        <h2 id="alg_scheduleHeader">Schedule</h2>
+
+        <form id="algForm2">
+            <label id = "alg_threshold_name" for="threshold">Threshold:</label>
+            <input type="text" id="alg_threshold" name="threshold" value="1.5"><br>
+            <button id="alg_submitThresholdButton" type="button" onclick="alg_submitThreshold()">Submit</button>
+        </form>
+        <div id="algSchedule" ></div>
+    </div>
+    <!-- Cluster Plot tab content -->
+    <div class="tab-pane fade" id="cluster1" role="tabpanel" aria-labelledby="cluster-tab">
+        <h2>Cluster Plot</h2>
+        <!-- Form to select clustering parameters -->
+        <form id="clusterForm">
+            <div class="input-row">
+                <label for="day">Day:</label>
+                <select name="day" id="day">
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                </select>
+            </div>
+            <div class="input-row">
+                <label for="start_time">Start Time:</label>
+                <input type="time" id="start_time" name="start_time" min="00:00" max="23:00" step="3600" value="09:00" onchange="validateTime()">
+
+                <label for="end_time">End Time:</label>
+                <input type="time" id="end_time" name="end_time" min="00:00" max="23:00" step="3600" value="17:00" onchange="validateTime()">
+            </div>
+
+            <script>
+                function validateTime() {
+                    var startTime = document.getElementById("start_time").value;
+                    var endTime = document.getElementById("end_time").value;
+        
+                    if (startTime && endTime) {
+                        if (startTime >= endTime) {
+                            alert("End time must be after the start time.");
+                            document.getElementById("end_time").value = ""; // Clear the end time value
                         }
                     }
-                </script>
-                <div class="input-row">
-                    <label for="data_file">Data File:</label>
-                    <select name="data_file" id="data_file">
-                        <option value="exportforuconn">exportforuconn</option>
-                        <option value="placeholder">placeholder</option>
-                    </select>
-                    <label for="threshold">Threshold:</label>
-                    <input type="text" id="threshold" name="threshold" value="1.5"><br>
+                }
+            </script>
+            <div class="input-row">
+                <label for="data_file">Data File:</label>
+                <select name="data_file" id="data_file">
+                    <option value="exportforuconn">exportforuconn</option>
+                    <option value="exportforuconn2">exportforuconn2</option>
+                </select>
+            </div>
+            <button type="button" onclick="runClustering()">Run Clustering</button>
+        </form>
+
+        <!-- Container for the plot -->
+        <div id="clusterPlot"></div>
+        <!-- Container for the schedule -->
+
+        <h2 id="scheduleHeader" style="display: none;">Schedule</h2>
+
+        <form id="clusterForm2">
+            <div class="input-row">
+                <label id = "threshold_name" for="threshold">Threshold:</label>
+                <input type="text" id="threshold" name="threshold" value="1.5"><br>
+            </div>
+            <button id="submitThresholdButton" type="button" onclick="submitThreshold()">Submit</button>
+        </form>
+
+
+        <div id="clusterSchedule" ></div>
+
+        <h2 id="groupHeader" style="display: none;">Find Servers</h2>
+
+        <form id="clusterForm3">
+            <div class="input-row">
+                <label id = "find_servers_name" for="find_servers">Group #:</label>
+                <input type="text" id="find_servers" name="find_servers" value="0"><br>
+            </div>
+            <button id = "submitResultsButton" type="button" onclick="submitResults()">Submit</button>
+        </form>
+
+        <div id="clusterResults" ></div>
+
+    </div>
+    <!-- About tab content -->
+    <div class="tab-pane fade" id="about1" role="tabpanel" aria-labelledby="about-tab">
+        <div class="row">
+            <div class="col-lg-1.5">
+                <ul class="nav flex-column" id="aboutSideTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="a-area1-tab" data-toggle="tab" href="#a-area1" role="tab" aria-controls="a-area1" aria-selected="true">About Us</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="a-area2-tab" data-toggle="tab" href="#a-area2" role="tab" aria-controls="a-area2" aria-selected="false">More</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="col-lg-0.5"></div> <!-- Empty column to offset for side tabs -->
+            <div class="col-lg-9">
+                <div class="tab-content" id="aboutTabContent">
+                    <!-- Area 1 content -->
+                    <div class="tab-pane fade show active" id="a-area1" role="tabpanel" aria-labelledby="a-area1-tab">
+                        <h2>About Us</h2>
+                        <div class="container">
+                            <!-- Person 1 -->
+                            <div class="person">
+                                <h3>David LaCava</h3>
+                                <img src="{{ url_for('static', filename='david.jpg') }}" alt="David">
+                                <p>Team Leader + Anomaly Detection</p>
+                                <p>Email: </p>
+                            </div>
+
+                            <!-- Person 2 -->
+                            <div class="person">
+                                <h3>Jessica Janko</h3>
+                                <img src="{{ url_for('static', filename='jessica.jpg') }}" alt="Jessica">
+                                <p>GUI Developer</p>
+                                <p>Email: jessicabjanko@gmail.com</p>
+                            </div>
+
+                            <!-- Person 3 -->
+                            <div class="person">
+                                <h3>Angeline McLean</h3>
+                                <img src="{{ url_for('static', filename='angeline.jpg') }}" alt="Angeline">
+                                <p>Clustering Algorithm</p>
+                                <p>Email: </p>
+                            </div>
+
+                            <!-- Person 4 -->
+                            <div class="person">
+                                <h3>Andy Garcia</h3>
+                                <img src="{{ url_for('static', filename='andy.jpg') }}" alt="Andy">
+                                <p>Seasonal Decomposition Model</p>
+                                <p>Email: </p>
+                            </div>
+
+                            <!-- Person 5 -->
+                            <div class="person">
+                                <h3>Mason Ritchotte</h3>
+                                <img src="{{ url_for('static', filename='mason.jpg') }}" alt="Mason">
+                                <p>Prophet Model </p>
+                                <p>Email: </p>
+                            </div>
+
+                            <!-- Person 6 -->
+                            <div class="person">
+                                <h3>Nicholas Dillon</h3>
+                                <img src="{{ url_for('static', filename='nicholas.jpg') }}" alt="Nicholas">
+                                <p>LSTM Model </p>
+                                <p>Email: </p>
+                            </div>
+                    </div>
+                    <!-- Area 2 content -->
+                    <div class="tab-pane fade" id="a-area2" role="tabpanel" aria-labelledby="a-area2-tab">
+                        <h2>Solutions</h2>
+                        <ul class="nav nav-tabs" id="innerTabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="inner-tab1" data-toggle="tab" href="#inner-pane1" role="tab" aria-controls="inner-pane1" aria-selected="true">Models</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="inner-tab2" data-toggle="tab" href="#inner-pane2" role="tab" aria-controls="inner-pane2" aria-selected="false">Clustering</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="innerTabContent">
+                            <div class="tab-pane fade show active" id="inner-pane1" role="tabpanel" aria-labelledby="inner-tab1">
+                                <p>Machine Learning Models:</p>
+                                <p class="indented">Seasonal Decomposition Model: </p>
+                                <p class="indented">Time series decomposition is a statistical modeling technique that works by analyzing the underlying patterns within a time series data set. It involves breaking down the observed data into three components: trend, seasonality, and residuals. The trend component represents the approximation of the long-term observed movement of the data, while seasonality captures periodic fluctuations that repeat at fixed intervals. Residuals represent the leftover variation after accounting for the trend and seasonality  components. By decomposing the time series, we get a powerful model that does well with forecasting, without needing to conform to model assumptions such as stationarity that other time series models require, leading to this model being adaptable to various time granularities and perfect for our problem in forecasting server usage across various timeframes.</p>
+                                <p class="indented">Long Short-Term Memory (LSTM) Model: </p>
+                                <p class="indented">The Long Short-Term Memory (or LSTM) model is a type of recurrent neural network (RNN) that is designed to understand data that occurs in sequence. LSTM models are particularly effective at learning data that contains long-term dependencies. The model is composed of a memory cell and 3 gates: the input, output, and forget gates. The memory cell is the core of the model, which stores the information learned from the data sequence as the model steps through each time step. The forget gate decides what information from the previous cell’s memory is kept. The input gate decides what new information is used in the memory cell. The output gate decides what information from the current memory cell state is output to be used by later cells. In comparison to traditional RNNs, LSTM models are not prone to losing information from many steps earlier in the sequence, which is what allows them to learn long-term dependencies in data. This is what allows LSTM to capture underlying patterns in time series data, such as server load, and accurately model and predict it. </p>
+                                <p class="indented">Prophet Model: </p>
+                                <p class="indented">The Prophet forecasting model is designed around an additive framework that captures various aspects of time series data. The main components of this model are: trend, seasonality, and holidays/events. The trend component models long-term progression in the data, allowing for flexibility in capturing linear or non-linear growth patterns without the need for the data to be stationary. Seasonality addresses recurring patterns on different scales, including daily, weekly, and yearly fluctuations, using Fourier series to adapt to complex seasonal behaviors. Lastly, holidays and special events are explicitly modeled to account for periodic spikes or drops in server usage that do not fit regular seasonal patterns. Together, these components allow Prophet to accurately forecast time series data with various underlying patterns, making it an invaluable tool for planning and resource allocation in server management.</p>
+                            </div>
+                            <div class="tab-pane fade" id="inner-pane2" role="tabpanel" aria-labelledby="inner-tab2">
+                                <p>Clustering Algorithm:</p>
+                                <p class="indented">DBScan:</p>
+                                <p class="indented">DBScan is a density-based clustering algorithm that finds clusters by grouping data points that are close together based on a specified distance and density threshold. DBScan is particularly useful for identifying clusters or arbitrary shapes and for detecting noise in the data. This will help our team identify any outliers and remove them from our final data set. Additionally it will be able to group servers based on certain CPU percentages in a way that we can accurately identify trends in the data and use them to turn on and off certain servers.</p>
+                            </div>
+                        </div>
                 </div>
-                <button type="button" onclick="runClustering()">Run Clustering</button>
-            </form>
-
-            <!-- Container for the plot -->
-            <div id="clusterPlot"></div>
-            <!-- Container for the schedule -->
-
-            <h2 id="scheduleHeader" style="display: none;">Schedule</h2>
-            <div id="clusterSchedule" ></div>
-        </div>
-        <!-- About tab content -->
-        <div class="tab-pane fade" id="about1" role="tabpanel" aria-labelledby="about-tab">
-            <h2>About</h2>
-            <p>Our Team:</p>
+            </div>
         </div>
     </div>
-    
     </div>
+    </div>
+
     <script>
+        document.getElementById('alg_submitThresholdButton').style.visibility = 'hidden';
+        document.getElementById('alg_threshold_name').style.visibility = 'hidden';
+        document.getElementById('alg_threshold').style.visibility = 'hidden';
+        document.getElementById('alg_scheduleHeader').style.visibility = 'hidden';
+
+        document.getElementById('submitThresholdButton').style.visibility = 'hidden';
+        document.getElementById('threshold_name').style.visibility = 'hidden';
+        document.getElementById('threshold').style.visibility = 'hidden';
+
+        document.getElementById('find_servers_name').style.visibility = 'hidden';
+        document.getElementById('find_servers').style.visibility = 'hidden';
+        document.getElementById('submitResultsButton').style.visibility = 'hidden';  
+
         function runClustering() {
+
+            document.getElementById('submitThresholdButton').style.visibility = 'hidden';
+            document.getElementById('threshold_name').style.visibility = 'hidden';
+            document.getElementById('threshold').style.visibility = 'hidden';
+
+            document.getElementById('find_servers_name').style.visibility = 'hidden';
+            document.getElementById('find_servers').style.visibility = 'hidden';
+            document.getElementById('submitResultsButton').style.visibility = 'hidden';  
+
+            document.getElementById('scheduleHeader').style.visibility = 'hidden';
+            document.getElementById('groupHeader').style.visibility = 'hidden';
+
+            document.getElementById('clusterSchedule').innerHTML = '';
+            document.getElementById('clusterResults').innerHTML = '';
+
+
+
             document.getElementById('clusterPlot').innerHTML = '<p>Loading...</p>';
             // Get form data
             const day = document.getElementById('day').value;
             const start_time = document.getElementById('start_time').value;
             const end_time = document.getElementById('end_time').value;
             const data_file = document.getElementById('data_file').value;
-            const threshold = document.getElementById('threshold').value;
             // Make a POST request to the server to run clustering
             fetch('/run-cluster-graph', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ day, start_time, end_time, data_file, threshold})
+                body: JSON.stringify({ day, start_time, end_time, data_file})
             })
             .then(response => response.json())
             .then(data => {
                 document.getElementById('clusterPlot').innerHTML = '';
-                Plotly.newPlot('clusterPlot', JSON.parse(data.plot_data));
+                Plotly.newPlot('clusterPlot', JSON.parse(data.plot_data[0]));
+                
+                document.getElementById('scheduleHeader').style.visibility = 'visibile';
                 document.getElementById('scheduleHeader').style.display = 'block';
-                document.getElementById('clusterSchedule').innerHTML = data.schedule_html;
+
+                document.getElementById('submitThresholdButton').style.visibility = 'visible';
+                document.getElementById('threshold_name').style.visibility = 'visible';
+                document.getElementById('threshold').style.visibility = 'visible';
+                document.getElementById('threshold').value = data.plot_data[1];
             })
             .catch(error => {
                 console.error('Error:', error);
             });
         }
+        function submitThreshold() {
+
+            const threshold = document.getElementById('threshold').value;
+            fetch('/run-cluster-schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({threshold})
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('clusterSchedule').innerHTML = data.schedule_html;
+
+                document.getElementById('groupHeader').style.visibility = 'visibile';
+                document.getElementById('groupHeader').style.display = 'block';
+
+                document.getElementById('find_servers_name').style.visibility = 'visible';
+                document.getElementById('find_servers').style.visibility = 'visible';
+                document.getElementById('submitResultsButton').style.visibility = 'visible';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        function submitResults() {
+            const find_servers = document.getElementById('find_servers').value;
+            fetch('/run-cluster-results', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({find_servers})
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('clusterResults').innerHTML = data.results_html;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }        
         function runAlgorithm() {
             document.getElementById('loadingMessage').style.display = 'block';
             // Get the selected algorithm from the dropdown
             const selectedAlgorithm = document.getElementById('algorithm').value;
+            const data_file = document.getElementById('data_file').value;
+            
+            document.getElementById('alg_submitThresholdButton').style.visibility = 'hidden';
+            document.getElementById('alg_threshold_name').style.visibility = 'hidden';
+            document.getElementById('alg_threshold').style.visibility = 'hidden';
+            document.getElementById('alg_scheduleHeader').style.visibility = 'hidden';
+
+            document.getElementById('plot_base64_1').style.visibility = 'hidden';
+            document.getElementById('plot_base64_2').style.visibility = 'hidden';
+
+            document.getElementById('algSchedule').style.visibility = 'hidden';
+
 
             if (selectedAlgorithm === 'ProphetModel') {
                 fetch('/run-prophet', {
@@ -257,16 +593,26 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({data_file})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
+                    document.getElementById('plot_base64_1').style.visibility = 'visible';
+                    document.getElementById('plot_base64_2').style.visibility = 'visible';
                     // Update the content of the results div based on the response from the server
                     document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_prophet[0];
                     document.getElementById('plot_base64_2').src = "data:image/png;base64," + data.plot_prophet[1];
                     // Hide loading message
                     document.getElementById('loadingMessage').style.display = 'none';
+
+                    document.getElementById('alg_submitThresholdButton').style.visibility = 'visible';
+                    document.getElementById('alg_threshold_name').style.visibility = 'visible';
+                    document.getElementById('alg_threshold').value = data.plot_prophet[2];
+                    document.getElementById('alg_threshold').style.visibility = 'visible';
+                    document.getElementById('alg_scheduleHeader').style.visibility = 'visible';
+
                 })
+
                 .catch(error => console.error('Error:', error));
             }
             if (selectedAlgorithm === 'SeasonalDecompositionModel') {
@@ -275,15 +621,24 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({data_file})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
+                    document.getElementById('plot_base64_1').style.visibility = 'visible';
+                    document.getElementById('plot_base64_2').style.visibility = 'visible';
+
                     // Update the content of the results div based on the response from the server
-                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_seasonaldecomposition;
+                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_seasonaldecomposition[0];
                     document.getElementById('plot_base64_2').src = "";
                     // Hide loading message
                     document.getElementById('loadingMessage').style.display = 'none';
+
+                    document.getElementById('alg_submitThresholdButton').style.visibility = 'visible';
+                    document.getElementById('alg_threshold_name').style.visibility = 'visible';
+                    document.getElementById('alg_threshold').value = data.plot_seasonaldecomposition[1];
+                    document.getElementById('alg_threshold').style.visibility = 'visible';
+                    document.getElementById('alg_scheduleHeader').style.visibility = 'visible';
                 })
                 .catch(error => console.error('Error:', error));
             }
@@ -295,8 +650,11 @@
                 },
                 body: JSON.stringify({})
                 })
-                .then(response => response.json()) // Assuming your server returns JSON
+                .then(response => response.json(data_file)) 
                 .then(data => {
+                    document.getElementById('plot_base64_1').style.visibility = 'visible';
+                    document.getElementById('plot_base64_2').style.visibility = 'visible';
+
                     // Update the content of the results div based on the response from the server
                     document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_lstm;
                     document.getElementById('plot_base64_2').src = "";
@@ -305,7 +663,60 @@
                 })
                 .catch(error => console.error('Error:', error));
             }
-        } 
+        }
+        function alg_submitThreshold() {
+            document.getElementById('algSchedule').style.visibility = 'visible';
+
+            const selectedAlgorithm = document.getElementById('algorithm').value;
+            const threshold = document.getElementById('alg_threshold').value;
+            if (selectedAlgorithm === 'SeasonalDecompositionModel') {
+
+                fetch('/run-seasonaldecomposition-schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({threshold})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    document.getElementById('algSchedule').innerHTML = data.server_on_off_df_html;
+                })
+
+                .catch(error => console.error('Error:', error));
+            }
+            if (selectedAlgorithm === 'LSTMModel') {
+                fetch('/run-ltsm-schedule', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({threshold})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    document.getElementById('algSchedule').innerHTML = data.server_on_off_df_html;
+                })
+
+                .catch(error => console.error('Error:', error));
+            }
+            if (selectedAlgorithm === 'ProphetModel') {
+                fetch('/run-prophet-schedule', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({threshold})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('algSchedule').innerHTML = data.server_on_off_df_html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+        }
 </script>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>

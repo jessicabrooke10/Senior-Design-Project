@@ -26,12 +26,22 @@ from sklearn.metrics import make_scorer, mean_squared_error
 from sklearn.base import BaseEstimator, RegressorMixin
 import math
 import time
+from datetime import datetime
+import os
+
 app = Flask(__name__)
 
 chunksize = 100000
 
+DBSCAN_data = None
+df = None
+cluster_average_median = 0
 # Generate Cluster Plot
-def generate_plot(day, start_time, end_time, data_file, threshold):
+def generate_plot(day, start_time, end_time, data_file):
+
+    global DBSCAN_data
+    global df
+    global cluster_average_median
     
     df = pd.read_csv(data_file + ".csv")
 
@@ -132,10 +142,14 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
     '#483d8b', '#2f4f4f', '#2f4f4f', '#00ced1', '#9400d3', '#ff1493', '#00bfff', '#696969', 
     '#696969', '#1e90ff', '#b22222', '#fffaf0', '#228b22', '#ff00ff', '#dcdcdc', '#f8f8ff'
 ]
-
+    median_values = []
     # Iterate over unique cluster IDs
     for cluster_id in set(cluster_labels):
         cluster_data = DBSCAN_dataset[DBSCAN_dataset['Cluster']!=-1][DBSCAN_dataset[DBSCAN_dataset['Cluster']!=-1]['Cluster'] == cluster_id]
+
+        median_cpu = np.median(cluster_data['CPU_95th_Perc'])
+        median_values.append(median_cpu)
+
 
         # Extract x and y data for the current cluster
         x_cluster = cluster_data['_time']
@@ -152,6 +166,7 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
             marker=dict(color=custom_palette[cluster_id]),
             hovertext=hover_text_cluster  # Specify hover text for each data point in the current cluster
         ))
+    cluster_average_median = np.mean(median_values)
 
     # Customize the layout of the figure
     fig.update_layout(
@@ -171,6 +186,27 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
             )
         )
     plot_json = fig.to_json()
+
+    DBSCAN_data = DBSCAN_dataset
+
+    return plot_json, cluster_average_median
+
+def generate_cluster_schedule(threshold):
+
+    DBSCAN_dataset = DBSCAN_data.copy()
+
+    eps_value = 0.23
+    groups = 2
+    
+    clustering = DBSCAN(eps=eps_value, min_samples=groups).fit(DBSCAN_data)
+    DBSCAN_dataset = DBSCAN_data.copy()
+    DBSCAN_dataset.loc[:,'Cluster'] = clustering.labels_ 
+
+    cluster_stats = DBSCAN_dataset[DBSCAN_dataset['Cluster']!=-1].groupby('Cluster').agg({
+    'CPU_95th_Perc': ['min', 'max', 'mean', 'median', 'std']
+})
+    
+    cluster_labels = clustering.labels_[clustering.labels_ != -1]
 
     # determine schedule
     threshold = float(threshold)
@@ -194,24 +230,77 @@ def generate_plot(day, start_time, end_time, data_file, threshold):
             new_status = 'Off'
 
         new_row = pd.DataFrame({'Server': [new_server], 'Status': [new_status], 'Time': [formatted_time]})
-    
-        # Append the new row to the schedule DataFrame
+
         schedule = pd.concat([schedule, new_row], ignore_index=True)
-        # Pivot the DataFrame to display in wide format
+
     schedule_pivot = schedule.pivot_table(index='Time', columns='Server', values='Status', aggfunc='first')
 
     schedule_pivot.fillna("Never Used", inplace=True)
 
     schedule_html = schedule_pivot.to_html()
-    return plot_json, schedule_html
 
-# Generate Prophet Plots
-def generate_prophet():
-    # Load the CSV file
-    data = pd.read_csv("aggregated2.csv", header=None, names=['ds', 'y'])
+    return schedule_html
+
+
+def generate_cluster_results(find_servers):
+
+    DBSCAN_dataset = DBSCAN_data.copy()
+    eps_value = 0.23
+    groups = 2
+    clustering = DBSCAN(eps=eps_value, min_samples=groups).fit(DBSCAN_data)
+    DBSCAN_dataset.loc[:,'Cluster'] = clustering.labels_ 
+    
+    cluster_labels = clustering.labels_[clustering.labels_ != -1]
+
+    find_servers = int(find_servers)
+    max_servers_per_column = 15
+    cluster_labels = clustering.labels_
+    new_cluster_df = pd.DataFrame()
+
+    for cluster_id in set(cluster_labels):
+        if cluster_id != -1: 
+            cluster_df = df[cluster_labels == find_servers]
+
+            server_names = cluster_df['host']
+
+            num_columns = (len(server_names) + max_servers_per_column - 1) // max_servers_per_column
+
+            new_cluster_df = pd.DataFrame(columns=[f'Servers_{i+1}' for i in range(num_columns)])
+
+            for i, server_name in enumerate(server_names):
+                col_index = i % num_columns
+                new_cluster_df.loc[i // num_columns, f'Servers_{col_index+1}'] = server_name
+
+            new_cluster_df = new_cluster_df.fillna('')
+
+    results_html =  new_cluster_df.to_html()
+    return results_html
+
+prophet_median_cpu_usage = 0
+last_history_time = None
+future_forecast = None
+
+
+def generate_prophet(data_file):
+    global prophet_median_cpu_usage
+    global last_history_time
+    global future_forecast
+    df = pd.read_csv(data_file + ".csv")
+    df = df.fillna(0)
  
-    # Convert the 'ds' column to datetime format
-    data['ds'] = pd.to_datetime(data['ds'])
+    # Calculate the average CPU usage for each server
+    average_cpu = df.groupby('host')['CPU_95th_Perc'].mean().reset_index()
+
+    # Find inactives and filter them
+    inactive_servers = average_cpu[average_cpu['CPU_95th_Perc'] == 0]['host'].unique()
+    active_data = df[~df['host'].isin(inactive_servers)]
+
+    # Aggregate CPU usage by time (5 min intervals is data granularity)
+    data = active_data.groupby('_time')['CPU_95th_Perc'].mean().reset_index()
+    data.columns = ['ds', 'y']
+
+    # Convert the 'ds' column to datetime format and remove timezone
+    data['ds'] = pd.to_datetime(data['ds']).dt.tz_localize(None)  # Remove timezone information
 
     # Initialize the Prophet model
     model = Prophet() 
@@ -251,10 +340,48 @@ def generate_prophet():
     plt.close(fig1)
     plt.close(fig2)
 
-    return plot_base64_1, plot_base64_2
+    # Create a future dataframe for the next 24 hours at 5-minute intervals -- 288 periods = (24hrs * 60 min/hr) / (5 mininterval)
+    future = model.make_future_dataframe(periods=288, freq='5min')
+
+    # Make Prediction
+    forecast = model.predict(future)
+
+    last_history_time = data['ds'].max()
+    future_forecast = forecast[forecast['ds'] > last_history_time]
+
+    # Calculate the median of the future CPU usage
+    prophet_median_cpu_usage = future_forecast['yhat'].median()
+
+    return plot_base64_1, plot_base64_2, prophet_median_cpu_usage
+
+def generate_prophet_schedule(threshold):
+
+    # Create a new DataFrame for the next 24 hours at 30-minute intervals
+    time_range = pd.date_range(start=last_history_time, periods=48, freq='30min')
+    server_on_off_df = pd.DataFrame(time_range, columns=['Time'])
+    server_on_off_df['Servers'] = False  # Initialize column with False
+
+    # For each time in the new DataFrame, determine if we're turning servers on or off based on the median
+    for index, row in server_on_off_df.iterrows():
+        # Find the closest time in the future_forecast and its predicted value
+        closest_time = future_forecast.iloc[(future_forecast['ds'] - row['Time']).abs().argsort()[:1]]
+        if closest_time['yhat'].values[0] > float(threshold):
+            server_on_off_df.at[index, 'Servers'] = True
+
+    server_on_off_df_html = server_on_off_df.to_html()
+
+    return server_on_off_df_html
+
+
+forecast_series = None
+last_timestamp = None
+
 
 # Generate Time Series Seasonal Decomposition Plot
-def generate_seasonaldecomposition():
+# Generate Time Series Seasonal Decomposition Plot
+def generate_seasonaldecomposition(data_file):
+    global forecast_series
+    global last_timestamp
     # Read data
     df = pd.read_csv("24h_data.csv")
     dataframe = pd.Series(df["95th"])
@@ -265,7 +392,7 @@ def generate_seasonaldecomposition():
     stlf = STLForecast(dataframe, ES, model_kwargs=config, period=7)
     res = stlf.fit()
     forecasts = res.forecast(7)
-    
+
     # Append the forecasted values to the original data series
     last_timestamp = dataframe.index[-1]  # Convert to timestamp if not already
     forecast_index = [last_timestamp +  +i for i in range(1,8)]
@@ -278,7 +405,9 @@ def generate_seasonaldecomposition():
 
     # Overwrite the color of the last 7 points
     plt.plot(stream.index[-8:], stream[-8:], color="lightgreen",label = "Forecast")
-    
+
+    y_median = np.median(stream[-8:].values)
+
     # Highlight the forecasted portion
     plt.axvline(x=last_timestamp, color='orange', label='Transition from data to forecast')
     plt.legend()
@@ -300,8 +429,29 @@ def generate_seasonaldecomposition():
     # Close figure to release memory
     plt.close()
 
-    return plot_base64_1
+    return plot_base64_1, y_median
 
+def generate_seasonaldecomposition_schedule(threshold):
+    start_time = pd.to_datetime(last_timestamp)
+    # Create a list to store the rows
+    rows = []
+    time_increment = pd.Timedelta(minutes=5)
+
+    # Iterate over each time point and compare with the threshold
+    for _, y_value in forecast_series.items():
+        above_median = "On" if y_value > float(threshold) else "Off"
+        rows.append({"Time": start_time, "Servers": above_median})
+        start_time += time_increment 
+
+    # Create a DataFrame from the list of rows
+    server_on_off_df = pd.DataFrame(rows)
+
+    server_on_off_df['Time'] = pd.to_datetime(server_on_off_df['Time']).dt.strftime('%H:%M')
+
+    server_on_off_df_html = server_on_off_df.to_html()
+
+    return server_on_off_df_html
+    
 # Define LSTM Model
 class LSTMModel(nn.Module):
     def __init__(self, input_size=1, hidden_layer_size=50, output_size=1):
@@ -318,7 +468,7 @@ class LSTMModel(nn.Module):
         return predictions[-1]
     
 # Generate LSTM (Long Short-Term Memory) Plots
-def generate_lstm():
+def generate_lstm(data_file):
     df = pd.read_csv('by_half_hour.csv', parse_dates=True)
     timestamps = df["Timestamp"].tolist()
     cpu_data = df["Avg_CPU_95"].tolist()
@@ -393,36 +543,60 @@ def generate_lstm():
 
     return plot_base64_1
 
+def generate_ltsm_schedule(threshold):
+    "fix"
+    server_on_off_df_html = None
+    return server_on_off_df_html
+
 # Run Algorithm
 @app.route('/run-algorithm', methods=['POST'])
 def run_algorithm():
     if request.method == 'POST':
         algorithm = request.json.get('algorithm')
-        return jsonify({'algorithm': algorithm})
+        data_file = request.json.get('data_file')
+        return jsonify({'algorithm': algorithm, 'data_file': data_file})
     
 @app.route('/run-prophet', methods=['POST'])
 def run_prophet():
     if request.method == 'POST':
-        plot_prophet = generate_prophet()
-        return jsonify({'plot_prophet': [plot_prophet[0], plot_prophet[1]]})
+        data_file = request.json.get('data_file')
+        plot_prophet = generate_prophet(data_file)
+        return jsonify({'plot_prophet': [plot_prophet[0], plot_prophet[1], plot_prophet[2]]})
+    
+@app.route('/run-prophet-schedule', methods=['POST'])
+def run_prophet_schedule():
+    if request.method == 'POST':
+        threshold = request.json.get('threshold')
+        server_on_off_df_html = generate_prophet_schedule(threshold)
+        return jsonify({'server_on_off_df_html': server_on_off_df_html})
 
 @app.route('/run-seasonaldecomposition', methods=['POST'])
 def run_seasonaldecomposition():
     if request.method == 'POST':
-        plot_seasonaldecomposition = generate_seasonaldecomposition()
-        return jsonify({'plot_seasonaldecomposition': plot_seasonaldecomposition})
+        data_file = request.json.get('data_file')
+        plot_seasonaldecomposition = generate_seasonaldecomposition(data_file)
+        return jsonify({'plot_seasonaldecomposition': [plot_seasonaldecomposition[0], plot_seasonaldecomposition[1]]})
+    
+@app.route('/run-seasonaldecomposition-schedule', methods=['POST'])
+def run_seasonaldecomposition_schedule():
+    if request.method == 'POST':
+        threshold = request.json.get('threshold')
+        server_on_off_df_html = generate_seasonaldecomposition_schedule(threshold)
+        return jsonify({'server_on_off_df_html': server_on_off_df_html})
 
 @app.route('/run-lstm', methods=['POST'])
 def run_lstm():
     if request.method == 'POST':
-        plot_lstm = generate_lstm()
+        data_file = request.json.get('data_file')
+        plot_lstm = generate_lstm(data_file)
         return jsonify({'plot_lstm': plot_lstm})
-          
-@app.route('/choose_graph', methods=['POST'])
-def choose_graph():
+    
+@app.route('/run-ltsm-schedule', methods=['POST'])
+def run_ltsm_schedule():
     if request.method == 'POST':
-        graph = request.json.get('graph')
-        return jsonify({'graph': graph})
+        threshold = request.json.get('threshold')
+        server_on_off_df_html = generate_ltsm_schedule(threshold)
+        return jsonify({'server_on_off_df_html': server_on_off_df_html})
         
 @app.route('/run-cluster-graph', methods=['POST'])
 def run_cluster_graph():
@@ -431,9 +605,22 @@ def run_cluster_graph():
         start_time = request.json.get('start_time')
         end_time = request.json.get('end_time')
         data_file = request.json.get('data_file')
+        plot_data = generate_plot(day, start_time, end_time, data_file)
+        return jsonify({'plot_data': [plot_data[0], plot_data[1]]})
+    
+@app.route('/run-cluster-schedule', methods=['POST'])
+def run_cluster_schedule():
+    if request.method == 'POST':
         threshold = request.json.get('threshold')
-        plot_data, schedule_html = generate_plot(day, start_time, end_time, data_file, threshold)
-        return jsonify({'plot_data': plot_data, 'schedule_html': schedule_html})
+        schedule_html = generate_cluster_schedule(threshold)
+        return jsonify({'schedule_html': schedule_html})
+    
+@app.route('/run-cluster-results', methods=['POST'])
+def run_cluster_results():
+    if request.method == 'POST':
+        find_servers = request.json.get('find_servers')
+        results_html = generate_cluster_results(find_servers)
+        return jsonify({'results_html': results_html})
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
