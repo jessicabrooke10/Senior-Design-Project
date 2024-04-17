@@ -107,4 +107,4 @@ def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
     print(action_df)
 
 
-generate_seasonaldecomposition("export",('2023-09-24 00:00:00','2023-10-17 00:00:00'),time_granularity= 8 )
+generate_seasonaldecomposition("export",('2023-09-27 00:00:00','2023-10-17 00:00:00'),time_granularity= 1 )
