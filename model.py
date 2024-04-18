@@ -57,6 +57,8 @@ def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
     plt.plot(stream, color="black")
     # Overwrite the color of the last 7 points
     plt.plot(stream.index[-num_forecasts:], stream[-num_forecasts:], color="lightgreen",label = "Forecast")
+    plt.xlabel("Time")
+    plt.ylabel("Average CPU Usage %")
     # Highlight the forecasted portion
     plt.axvline(x=last_timestamp+1, color='orange', label='Transition from data to forecast')
     plt.legend()
@@ -107,4 +109,4 @@ def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
     print(action_df)
 
 
-generate_seasonaldecomposition("export",('2023-09-27 00:00:00','2023-10-17 00:00:00'),time_granularity= 1 )
+generate_seasonaldecomposition("export",('2023-09-16 00:00:00','2023-10-17 00:00:00'),time_granularity= 24 )
