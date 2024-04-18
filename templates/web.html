@@ -26,6 +26,7 @@
             border-radius: 8px;
             border: 1px solid #ddd;
         }
+
         .person {
             width: 300px;
             margin: 20px;
@@ -52,6 +53,34 @@
 
         button:hover {
             background-color: #007bff;
+        }
+        #plot_base64_1 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+            max-height: 500px;
+        }
+        #anm_plot_base64_1 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+        }
+        #anm_plot_base64_2 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+            max-height: 500px;
+        }
+        #anm_plot_base64_3 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+        }
+        #anm_plot_base64_4 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+            max-height: 500px;
+        }
+        #anm_plot_base64_5 {
+            width: 100%; /* Set the width to 100% */
+            height: auto;
+            max-height: 500px;
         }
         /* CSS code for the table */
         #clusterSchedule {
@@ -139,6 +168,9 @@
             font-size: 14px;
             margin-left: 20px; /* Adjust the margin as needed */
         }
+        .indented2 {
+            margin-left: 20px; /* Adjust the margin as needed */
+        }
 
     </style>
 </head>
@@ -160,6 +192,9 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="graph-tab" data-toggle="tab" href="#cluster1" role="tab" aria-controls="cluster1" aria-selected="false">Cluster Plot</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="anomaly-tab" data-toggle="tab" href="#anomaly1" role="tab" aria-controls="anomaly1" aria-selected="false">Anomaly Dectection</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" id="about-tab" data-toggle="tab" href="#about1" role="tab" aria-controls="about1" aria-selected="false">About</a>
@@ -214,19 +249,40 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Algorithm Analysis Tab</strong></p>
-                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph which predicts CPU usage of every server at specified times. Next it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
+                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph which predicts CPU usage of all servers at specified times. Next it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
                                             The way this works is if the predicted CPU usage at a certain time is under the threshold, the server will be turned off, otherwise it will be turned on. To help the user choose a threshold value, we prepopulated the input value with the median of all predicted CPU values that the models came up with. 
                                             As the threshold changes so does the schedule. Lastly, the user may be able to input a CSV file so we may come up with different schedules based on the information provided. </p>
+                                        <p> For the LSTM & Prophet Model we also allow the user to choose the time granularity which offers the users to have the models make predictions based on grouped sets of instants
+                                            from a time domain. (Ex. Every 5minutes, hour, or daily)
+                                        </p>
+                                        <p> Note that the LSTM & Prophet Model produce schedules that tell the user when ALL servers should be on or off during a specific time. The Seasonal Decomposition Model schedule only has two values,
+                                            that dictate a change of state from on to off or off to on.</p>
+                                        <p>Times to Run: </p>
+                                        <p class="indented2">Seasonal Decomposition Model: 56 seconds</p>
+                                        <p class="indented2">LSTM Model: 2 minutes</p>
+                                        <p class="indented2">Prophet Model: 8 seconds</p>
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Cluster Tab</strong></p>
-                                        <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, and an end time. Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
+                                        <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, a end time, and a time_granularity (groups data based on time the user chose, ex.hourly). Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
                                             group together servers based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next based on these groupings a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
                                             To help the user choose a threshold value, we prepopulated the input with the median values across all clusters. Using the threshold value the schedule will either turn on the group of servers if their CPU percentage is higher than the threshold or turn it off otherwise. Lastly, since
-                                            the clustering algorithm groups servers together, to find the specific server in each group you can select the group number and a table will display the server belonging to that group.
+                                            the clustering algorithm groups servers together, to find the servers in each group you can select the group number and a table will display the server belonging to that group.
                                         </p>
+                                        <p>Times to Run: </p>
+                                        <p class="indented2">Clustering Graph: 24 seconds</p>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p><strong>Anomaly Tab</strong></p>
+                                        <p>Click on the anomaly detection tab to identify anomalous activity. Using statistical techniques, it identifies patterns diverging from expected behavior. The code includes features for data preprocessing, ensuring clean data ready for analysis. It extracts relevant metrics such as CPU usage, memory consumption, and disk activity. 
+                                            Anomaly detection algorithms are then applied to pinpoint abnormal server behavior and display relevant information to the user. This code strengthens the reliability of our data. 
+                                        </p>
+                                        <p>Times to Run: </p>
+                                        <p class="indented2">Anomaly Detection: 7 seconds</p>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -254,17 +310,43 @@
             <p>*Note: Algorithms may take a minute or so to run.*</p>
             <form id="algorithmForm">
                 <label for="algorithm">Choose an algorithm:</label>
-                <select name="algorithm" id="algorithm">
+                <select name="algorithm" id="algorithm" onchange="handleDateChange()">
                     <option value="SeasonalDecompositionModel">Seasonal Decomposition Model</option>
                     <option value="LSTMModel">LSTM Model</option>
                     <option value="ProphetModel">Prophet Model</option>
                 </select>
                 <label for="data_file">Data File:</label>
-                <select name="data_file" id="data_file">
+                <select name="data_file" id="alg_data_file" onchange="handleDateChange()">
                     <option value="exportforuconn">exportforuconn</option>
                     <option value="exportforuconn2">exportforuconn2</option>
                 </select>
-                <button type="button" onclick="runAlgorithm()">Run Algorithm</button>
+                <div>
+                    <label>
+                        Start Date:
+                    </label>
+                    <input id= "alg_start" type="date" value=""></input>
+                    <label>
+                        End Date:
+                    </label>
+                    <input id= "alg_end" type="date" value=""></input>
+                </div>
+                <div>
+                    <label id="label_time_granularity">Time Granularity</label>
+                    <select name="options_time_granularity" id="time_granularity">
+                        <option value="0.0833333">5 min</option>
+                        <option value="0.166667">10 min</option>
+                        <option value="0.25">15 min</option>
+                        <option value="0.333333">20 min</option>
+                        <option value="0.50">30 min</option>
+                        <option value="1">1 hr</option>
+                        <option value="1.5">1.5 hr</option>
+                        <option value="2">2 hr</option>
+                        <option value="24">1 day</option>
+                    </select>
+                </div>
+                <div>
+                    <button id= "algButton" type="button" onclick="runAlgorithm()">Run Algorithm</button>
+                </div>
             </form>
         </div>
 
@@ -329,6 +411,23 @@
                     <option value="exportforuconn2">exportforuconn2</option>
                 </select>
             </div>
+            <div>
+                <label id="c_label_time_granularity">Time Granularity</label>
+                <select name="options_time_granularity" id="c_time_granularity">
+                    <option value="1h">1 hr</option>
+                    <option value="5min">5 min</option>
+                    <option value="10min">10 min</option>
+                    <option value="15min">15 min</option>
+                    <option value="20min">20 min</option>
+                    <option value="30min">30 min</option>
+                    <option value="90min">1.5 hr</option>
+                    <option value="2h">2 hr</option>
+                    <option value="3h">3 hr</option>
+                    <option value="4h">4 hr</option>
+                    <option value="5h">5 hr</option>
+                    <option value="6h">6 hr</option>
+                </select>
+            </div>
             <button type="button" onclick="runClustering()">Run Clustering</button>
         </form>
 
@@ -362,6 +461,85 @@
         <div id="clusterResults" ></div>
 
     </div>
+    <!-- Anomaly content -->
+    <div class="tab-pane fade" id="anomaly1" role="tabpanel" aria-labelledby="anomaly-tab">
+        <div class="row">
+            <div class="col-lg-1.5">
+                <ul class="nav flex-column" id="homeSideTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="anm-area1-tab" data-toggle="tab" href="#anm-area1" role="tab" aria-controls="anm-area1" aria-selected="true">Find Anomalies</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="anm-area2-tab" data-toggle="tab" href="#anm-area2" role="tab" aria-controls="anm-area2" aria-selected="false">Anomaly Data</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="anm-area3-tab" data-toggle="tab" href="#anm-area3" role="tab" aria-controls="anm-area3" aria-selected="false">Anomaly Level Metrics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="anm-area4-tab" data-toggle="tab" href="#anm-area4" role="tab" aria-controls="anm-area4" aria-selected="false">Anomalies Over Time</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="anm-area5-tab" data-toggle="tab" href="#anm-area5" role="tab" aria-controls="anm-area5" aria-selected="false">Anomalies Avg/Hr</a>
+                    </li>                                      
+                </ul>
+            </div>
+            <div class="col-lg-0.5"></div> <!-- Empty column to offset for side tabs -->
+            <div class="col-lg-9">
+                <div class="tab-content" id="homeTabContent">
+                    <!-- Area 1 content -->
+                    <div class="tab-pane fade show active" id="anm-area1" role="tabpanel" aria-labelledby="anm-area1-tab">
+                        <h2>Anomaly Detection</h2>
+                        <div> 
+                            <form>
+                                <label for="data_file">Data File:</label>
+                                <select name="data_file" id="anm_data_file">
+                                    <option value="exportforuconn">exportforuconn</option>
+                                    <option value="exportforuconn2">exportforuconn2</option>
+                                </select>
+                                <div>
+                                    <button type="button" onclick="runAnomaly()">Run Algorithm</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div id="plots">
+                            <div id="anm_loadingMessage" >Loading...</div> <!-- Loading message -->
+                            <img id="anm_plot_base64_1" src="" alt="">
+                        </div>
+                    </div>
+                    <!-- Area 2 content -->
+                    <div class="tab-pane fade" id="anm-area2" role="tabpanel" aria-labelledby="anm-area2-tab">
+                        <div id="plots">
+                            <h2 id="anm_header2">Anomaly Data</h2>
+                            <img id="anm_plot_base64_2" src="" alt="">
+                        </div>
+                    </div>
+                    <!-- Area 3 content -->
+                    <div class="tab-pane fade" id="anm-area3" role="tabpanel" aria-labelledby="anm-area3-tab">
+                        <div id="plots">
+                            <h2 id="anm_header3">Anomaly Stats</h2>
+                            <img id="anm_plot_base64_3" src="" alt="">
+                        </div>
+                    </div> 
+                    <!-- Area 4 content -->
+                    <div class="tab-pane fade" id="anm-area4" role="tabpanel" aria-labelledby="anm-area4-tab">
+                        <div id="plots">
+                            <h2 id="anm_header4">Anomalies Over Time</h2>
+                            <img id="anm_plot_base64_4" src="" alt="">
+                        </div>
+                    </div> 
+                    <!-- Area 5 content -->
+                    <div class="tab-pane fade" id="anm-area5" role="tabpanel" aria-labelledby="anm-area5-tab">
+                        <div id="plots">
+                            <h2 id="anm_header5">Anomalies Avg/Hr</h2>
+                            <img id="anm_plot_base64_5" src="" alt="">
+                        </div>
+                    </div> 
+                </div>
+            </div>
+
+
+        </div> <!-- end row -->
+    </div>
     <!-- About tab content -->
     <div class="tab-pane fade" id="about1" role="tabpanel" aria-labelledby="about-tab">
         <div class="row">
@@ -372,6 +550,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="a-area2-tab" data-toggle="tab" href="#a-area2" role="tab" aria-controls="a-area2" aria-selected="false">More</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="a-area3-tab" data-toggle="tab" href="#a-area3" role="tab" aria-controls="a-area3" aria-selected="false">Next Steps</a>
                     </li>
                 </ul>
             </div>
@@ -388,7 +569,6 @@
                                 <h3>David LaCava</h3>
                                 <img src="{{ url_for('static', filename='david.jpg') }}" alt="David">
                                 <p>Team Leader + Anomaly Detection</p>
-                                <p>Email: </p>
                             </div>
 
                             <!-- Person 2 -->
@@ -396,7 +576,6 @@
                                 <h3>Jessica Janko</h3>
                                 <img src="{{ url_for('static', filename='jessica.jpg') }}" alt="Jessica">
                                 <p>GUI Developer</p>
-                                <p>Email: jessicabjanko@gmail.com</p>
                             </div>
 
                             <!-- Person 3 -->
@@ -404,23 +583,20 @@
                                 <h3>Angeline McLean</h3>
                                 <img src="{{ url_for('static', filename='angeline.jpg') }}" alt="Angeline">
                                 <p>Clustering Algorithm</p>
-                                <p>Email: </p>
                             </div>
 
                             <!-- Person 4 -->
                             <div class="person">
                                 <h3>Andy Garcia</h3>
-                                <img src="{{ url_for('static', filename='andy.jpg') }}" alt="Andy">
+                                <img src="{{ url_for('static', filename='andy.jpg') }}" alt="">
                                 <p>Seasonal Decomposition Model</p>
-                                <p>Email: </p>
                             </div>
 
                             <!-- Person 5 -->
                             <div class="person">
                                 <h3>Mason Ritchotte</h3>
-                                <img src="{{ url_for('static', filename='mason.jpg') }}" alt="Mason">
+                                <img src="{{ url_for('static', filename='mason.jpg') }}" alt="">
                                 <p>Prophet Model </p>
-                                <p>Email: </p>
                             </div>
 
                             <!-- Person 6 -->
@@ -428,8 +604,8 @@
                                 <h3>Nicholas Dillon</h3>
                                 <img src="{{ url_for('static', filename='nicholas.jpg') }}" alt="Nicholas">
                                 <p>LSTM Model </p>
-                                <p>Email: </p>
                             </div>
+                    </div>
                     </div>
                     <!-- Area 2 content -->
                     <div class="tab-pane fade" id="a-area2" role="tabpanel" aria-labelledby="a-area2-tab">
@@ -458,14 +634,34 @@
                                 <p class="indented">DBScan is a density-based clustering algorithm that finds clusters by grouping data points that are close together based on a specified distance and density threshold. DBScan is particularly useful for identifying clusters or arbitrary shapes and for detecting noise in the data. This will help our team identify any outliers and remove them from our final data set. Additionally it will be able to group servers based on certain CPU percentages in a way that we can accurately identify trends in the data and use them to turn on and off certain servers.</p>
                             </div>
                         </div>
-                </div>
+                    </div>
+                    <div class="tab-pane fade" id="a-area3" role="tabpanel" aria-labelledby="a-area3-tab">
+                        <h2>What's Next?</h2>
+                        <p>If given additional time we would have liked to make the schedules produced by the models be able to tell you if each indivudal server
+                            should be on or off given a certain time. The way the models work now, we are averaging the CPU Usage of every server and building one singular model in order
+                            to predict the next times that all these servers will have a certain CPU usage. Thus in the future we would like to either build indivudal servers for each model to produce
+                            a seperate and accurate schedule for each server. Or we would like to be able to scan the dataset for each server and see if it is under or over our threshold produced by the models. 
+                            This would allow us to give Lockheed a specifc number of servers that should be on at a time.
+                        </p>
+                    </div>
+
             </div>
         </div>
     </div>
     </div>
+
     </div>
 
     <script>
+        window.onload = function() {
+
+        document.getElementById('anm_loadingMessage').style.visibility = 'hidden';
+        
+        document.getElementById('anm_header2').style.visibility = 'hidden';
+        document.getElementById('anm_header3').style.visibility = 'hidden';
+        document.getElementById('anm_header4').style.visibility = 'hidden';
+        document.getElementById('anm_header5').style.visibility = 'hidden';
+
         document.getElementById('alg_submitThresholdButton').style.visibility = 'hidden';
         document.getElementById('alg_threshold_name').style.visibility = 'hidden';
         document.getElementById('alg_threshold').style.visibility = 'hidden';
@@ -477,7 +673,114 @@
 
         document.getElementById('find_servers_name').style.visibility = 'hidden';
         document.getElementById('find_servers').style.visibility = 'hidden';
-        document.getElementById('submitResultsButton').style.visibility = 'hidden';  
+        document.getElementById('submitResultsButton').style.visibility = 'hidden';
+        
+        const data_file = document.getElementById('alg_data_file').value;
+
+        document.getElementById("algButton").disabled = true;
+        fetch('/run-times', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({data_file})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    var start_timestamp = data.timestamps[0];
+                    var end_timestamp = data.timestamps[1];
+
+                    var start_dateObj = new Date(start_timestamp);
+                    var end_dateObj = new Date(end_timestamp);
+
+                    var start_formattedDate = start_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                    var end_formattedDate = end_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+                    document.getElementById('alg_start').value = start_formattedDate;
+                    document.getElementById('alg_end').value = end_formattedDate;
+
+                    document.getElementById("algButton").disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
+        };
+        function handleDateChange() {
+            document.getElementById("algButton").disabled = true;
+            
+            document.getElementById("time_granularity").style.visibility = 'hidden';
+            document.getElementById("label_time_granularity").style.visibility = 'hidden';
+
+            var selectedAlgorithm = document.getElementById("algorithm").value;
+            const data_file = document.getElementById('alg_data_file').value;
+
+            if (selectedAlgorithm === "SeasonalDecompositionModel" || selectedAlgorithm === "ProphetModel") {
+
+                if (selectedAlgorithm == "SeasonalDecompositionModel"){
+                document.getElementById("time_granularity").style.visibility = 'visible';
+                document.getElementById("label_time_granularity").style.visibility = 'visible';
+                }
+
+                if (selectedAlgorithm == "ProphetModel"){
+                document.getElementById("time_granularity").style.visibility = 'hidden';
+                document.getElementById("label_time_granularity").style.visibility = 'hidden';
+
+                }
+
+                fetch('/run-times', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({data_file})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    var start_timestamp = data.timestamps[0];
+                    var end_timestamp = data.timestamps[1];
+
+                    var start_dateObj = new Date(start_timestamp);
+                    var end_dateObj = new Date(end_timestamp);
+
+                    var start_formattedDate = start_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                    var end_formattedDate = end_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+                    document.getElementById('alg_start').value = start_formattedDate;
+                    document.getElementById('alg_end').value = end_formattedDate;
+
+                    document.getElementById("algButton").disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+            if (selectedAlgorithm === "LSTMModel"){
+                document.getElementById("label_time_granularity").style.visibility = 'visible';
+                document.getElementById("time_granularity").style.visibility = 'visible';
+
+                fetch('/run-lstm-times', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({data_file})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    var start_timestamp = data.timestamps[0];
+                    var end_timestamp = data.timestamps[1];
+
+                    var start_dateObj = new Date(start_timestamp);
+                    var end_dateObj = new Date(end_timestamp);
+
+                    var start_formattedDate = start_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                    var end_formattedDate = end_dateObj.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+
+                    document.getElementById('alg_start').value = start_formattedDate;
+                    document.getElementById('alg_end').value = end_formattedDate;
+
+                    document.getElementById("algButton").disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+        }
 
         function runClustering() {
 
@@ -503,13 +806,14 @@
             const start_time = document.getElementById('start_time').value;
             const end_time = document.getElementById('end_time').value;
             const data_file = document.getElementById('data_file').value;
+            var time_granularity = document.getElementById('c_time_granularity').value;
             // Make a POST request to the server to run clustering
             fetch('/run-cluster-graph', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ day, start_time, end_time, data_file})
+                body: JSON.stringify({ day, start_time, end_time, data_file, time_granularity})
             })
             .then(response => response.json())
             .then(data => {
@@ -571,11 +875,17 @@
             });
         }        
         function runAlgorithm() {
+            document.getElementById("time_granularity").style.visibility = 'hidden';
+            document.getElementById("label_time_granularity").style.visibility = 'hidden';
+
             document.getElementById('loadingMessage').style.display = 'block';
             // Get the selected algorithm from the dropdown
             const selectedAlgorithm = document.getElementById('algorithm').value;
-            const data_file = document.getElementById('data_file').value;
-            
+            const data_file = document.getElementById('alg_data_file').value;
+
+            const start_time = document.getElementById('alg_start').value;
+            const end_time = document.getElementById('alg_end').value;
+
             document.getElementById('alg_submitThresholdButton').style.visibility = 'hidden';
             document.getElementById('alg_threshold_name').style.visibility = 'hidden';
             document.getElementById('alg_threshold').style.visibility = 'hidden';
@@ -593,7 +903,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file})
+                body: JSON.stringify({data_file, start_time, end_time})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
@@ -616,12 +926,16 @@
                 .catch(error => console.error('Error:', error));
             }
             if (selectedAlgorithm === 'SeasonalDecompositionModel') {
+                document.getElementById("label_time_granularity").style.visibility = 'visible';
+                document.getElementById("time_granularity").style.visibility = 'visible';
+                const time_granularity = document.getElementById('time_granularity').value;
+
                 fetch('/run-seasonaldecomposition', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file})
+                body: JSON.stringify({data_file, start_time, end_time, time_granularity})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
@@ -643,23 +957,52 @@
                 .catch(error => console.error('Error:', error));
             }
             if (selectedAlgorithm === 'LSTMModel') {
+                document.getElementById("label_time_granularity").style.visibility = 'visible';
+                document.getElementById("time_granularity").style.visibility = 'visible';
+                var time_granularity = document.getElementById('time_granularity').value;
+
+                if (time_granularity == 0.0833333){
+                    time_granularity = "5min";
+                } else if (time_granularity == 0.166667){
+                    time_granularity = "10min";
+                } else if (time_granularity == 0.25){
+                    time_granularity = "15min";
+                } else if (time_granularity == 0.333333){
+                    time_granularity = "20min";
+                } else if (time_granularity == 0.50){
+                    time_granularity = "30min";
+                } else if (time_granularity == 1){
+                    time_granularity = "1h";
+                } else if (time_granularity == 1.5){
+                    time_granularity = "90min";
+                } else if (time_granularity == 24){
+                    time_granularity = "24h";
+                }
                 fetch('/run-lstm', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({data_file, start_time, end_time, time_granularity})
                 })
-                .then(response => response.json(data_file)) 
+                .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
+
                     document.getElementById('plot_base64_1').style.visibility = 'visible';
                     document.getElementById('plot_base64_2').style.visibility = 'visible';
 
                     // Update the content of the results div based on the response from the server
-                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_lstm;
+                    document.getElementById('plot_base64_1').src = "data:image/png;base64," + data.plot_lstm[0];
                     document.getElementById('plot_base64_2').src = "";
+
                     // Hide loading message
                     document.getElementById('loadingMessage').style.display = 'none';
+
+                    document.getElementById('alg_submitThresholdButton').style.visibility = 'visible';
+                    document.getElementById('alg_threshold_name').style.visibility = 'visible';
+                    document.getElementById('alg_threshold').value = data.plot_lstm[1];
+                    document.getElementById('alg_threshold').style.visibility = 'visible';
+                    document.getElementById('alg_scheduleHeader').style.visibility = 'visible';
                 })
                 .catch(error => console.error('Error:', error));
             }
@@ -686,7 +1029,7 @@
                 .catch(error => console.error('Error:', error));
             }
             if (selectedAlgorithm === 'LSTMModel') {
-                fetch('/run-ltsm-schedule', {
+                fetch('/run-lstm-schedule', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -716,6 +1059,59 @@
                     console.error('Error:', error);
                 });
             }
+        }
+        function runAnomaly() {
+            document.getElementById('anm_loadingMessage').style.visibility = 'visible';
+            document.getElementById('anm_loadingMessage').style.display = 'block';
+
+            document.getElementById('anm_plot_base64_1').style.visibility = 'hidden';
+            document.getElementById('anm_plot_base64_2').style.visibility = 'hidden';
+            document.getElementById('anm_plot_base64_3').style.visibility = 'hidden';
+            document.getElementById('anm_plot_base64_4').style.visibility = 'hidden';
+            document.getElementById('anm_plot_base64_5').style.visibility = 'hidden';
+
+            document.getElementById('anm_header2').style.visibility = 'hidden';
+            document.getElementById('anm_header3').style.visibility = 'hidden';
+            document.getElementById('anm_header4').style.visibility = 'hidden';
+            document.getElementById('anm_header5').style.visibility = 'hidden';
+
+            const data_file = document.getElementById('anm_data_file').value;
+
+            fetch('/run-anomaly', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({data_file})
+                })
+                .then(response => response.json()) // Assuming your server returns JSON
+                .then(data => {
+                    document.getElementById('anm_loadingMessage').style.display = 'none';
+
+                    document.getElementById('anm_plot_base64_1').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_2').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_3').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_4').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_5').style.visibility = 'visible';
+
+                    document.getElementById('anm_plot_base64_1').src = "data:image/png;base64," + data.plot_anomaly[0];
+
+                    document.getElementById('anm_header2').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_2').src = "data:image/png;base64," + data.plot_anomaly[1];
+
+                    document.getElementById('anm_header3').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_3').src = "data:image/png;base64," + data.plot_anomaly[2];
+
+                    document.getElementById('anm_header4').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_4').src = "data:image/png;base64," + data.plot_anomaly[3];
+
+                    document.getElementById('anm_header5').style.visibility = 'visible';
+                    document.getElementById('anm_plot_base64_5').src = "data:image/png;base64," + data.plot_anomaly[4];
+
+                    document.getElementById('loadingMessage').style.display = 'none';
+
+                })
+                .catch(error => console.error('Error:', error));
         }
 </script>
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>

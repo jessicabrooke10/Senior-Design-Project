@@ -24,10 +24,14 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import make_scorer, mean_squared_error
 from sklearn.base import BaseEstimator, RegressorMixin
-import math
-import time
-from datetime import datetime
+import time_splitter as split
 import os
+import datacleaning as dc
+import math
+import statistics
+import time
+import random
+import pytz
 
 app = Flask(__name__)
 
@@ -37,7 +41,7 @@ DBSCAN_data = None
 df = None
 cluster_average_median = 0
 # Generate Cluster Plot
-def generate_plot(day, start_time, end_time, data_file):
+def generate_plot(day, start_time, end_time, data_file, time_granularity):
 
     global DBSCAN_data
     global df
@@ -65,7 +69,7 @@ def generate_plot(day, start_time, end_time, data_file):
     for i, data_list in day_dataframes.items():
         day_df = pd.DataFrame(data_list, columns=['host', '_time', 'CPU_95th_Perc'])
         day_df['_time'] = pd.to_datetime(day_df['_time'])
-        day_df['_time'] = day_df['_time'].dt.time
+        day_df['_time'] = day_df['_time'].dt.time 
         day_df.to_csv(f'days/{i.lower()}_data.csv', index=False)
 
     days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -75,7 +79,7 @@ def generate_plot(day, start_time, end_time, data_file):
         df = pd.read_csv(f'days/{i}_data.csv')
         df['_time'] = pd.to_datetime(df['_time'], format="%H:%M:00")
         df.set_index('_time', inplace=True)
-        hourly_df = df.groupby('host').resample('1H').mean()
+        hourly_df = df.groupby('host').resample(time_granularity).mean()
         hourly_df.reset_index(inplace=True)
         hourly_df.dropna(subset=['CPU_95th_Perc'], inplace=True)
         hourly_df.to_csv('days/hourly_aggregated_'+i+'.csv', index=False)
@@ -129,19 +133,7 @@ def generate_plot(day, start_time, end_time, data_file):
     # Create a Plotly Figure object
     fig = go.Figure()
     
-    custom_palette = [
-    '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', 
-    '#ff5733', '#ff1493', '#40e0d0', '#ffc0cb', '#ff8c00', '#4682b4', '#9acd32', '#ff8c00', 
-    '#9400d3', '#9932cc', '#008080', '#00ff7f', '#87ceeb', '#f08080', '#ffa07a', '#ffa500', 
-    '#ff4500', '#ff6347', '#8a2be2', '#7b68ee', '#6495ed', '#4169e1', '#191970', '#00bfff', 
-    '#1e90ff', '#00ffff', '#00ced1', '#20b2aa', '#008b8b', '#7fffd4', '#afeeee', '#40e0d0', 
-    '#7fff00', '#adff2f', '#228b22', '#32cd32', '#556b2f', '#008000', '#006400',
-    '#800000', '#a52a2a', '#deb887', '#5f9ea0', '#7fff00', '#d2691e', '#ff7f50', '#6495ed', 
-    '#fff8dc', '#dc143c', '#00ffff', '#00008b', '#008b8b', '#b8860b', '#a9a9a9', '#006400', 
-    '#bdb76b', '#8b008b', '#556b2f', '#ff8c00', '#9932cc', '#8b0000', '#e9967a', '#8fbc8f', 
-    '#483d8b', '#2f4f4f', '#2f4f4f', '#00ced1', '#9400d3', '#ff1493', '#00bfff', '#696969', 
-    '#696969', '#1e90ff', '#b22222', '#fffaf0', '#228b22', '#ff00ff', '#dcdcdc', '#f8f8ff'
-]
+    custom_palette = ['#{:06x}'.format(random.randint(0, 0xFFFFFF)) for _ in range(10000)]
     median_values = []
     # Iterate over unique cluster IDs
     for cluster_id in set(cluster_labels):
@@ -280,11 +272,12 @@ prophet_median_cpu_usage = 0
 last_history_time = None
 future_forecast = None
 
-
-def generate_prophet(data_file):
+# Generate Prophet Plots
+def generate_prophet(data_file, start_time, end_time):
     global prophet_median_cpu_usage
     global last_history_time
     global future_forecast
+
     df = pd.read_csv(data_file + ".csv")
     df = df.fillna(0)
  
@@ -301,6 +294,27 @@ def generate_prophet(data_file):
 
     # Convert the 'ds' column to datetime format and remove timezone
     data['ds'] = pd.to_datetime(data['ds']).dt.tz_localize(None)  # Remove timezone information
+
+    try:
+        start_time = pd.to_datetime(start_time)
+    except ValueError:
+        start_time = pd.to_datetime(timestamps[0])
+
+    try:
+        end_time = pd.to_datetime(end_time)
+    except ValueError:
+        end_time = pd.to_datetime(timestamps[-1])
+
+    if (start_time < pd.to_datetime(timestamps[0])) or (start_time > pd.to_datetime(timestamps[-1])):
+        start_time=pd.to_datetime(timestamps[0])
+    if (end_time > pd.to_datetime(timestamps[-1])) or (end_time < pd.to_datetime(timestamps[0])):
+        end_time=pd.to_datetime(timestamps[-1])
+
+    data['ds'] = pd.to_datetime(data['ds'])
+    data = data[(data['ds'] >= start_time) & (data['ds'] <= end_time)]
+ 
+    # Convert the 'ds' column to datetime format
+    data['ds'] = pd.to_datetime(data['ds'])
 
     # Initialize the Prophet model
     model = Prophet() 
@@ -352,6 +366,7 @@ def generate_prophet(data_file):
     # Calculate the median of the future CPU usage
     prophet_median_cpu_usage = future_forecast['yhat'].median()
 
+
     return plot_base64_1, plot_base64_2, prophet_median_cpu_usage
 
 def generate_prophet_schedule(threshold):
@@ -372,19 +387,62 @@ def generate_prophet_schedule(threshold):
 
     return server_on_off_df_html
 
-
 forecast_series = None
-last_timestamp = None
-
-
 # Generate Time Series Seasonal Decomposition Plot
-# Generate Time Series Seasonal Decomposition Plot
-def generate_seasonaldecomposition(data_file):
+def generate_seasonaldecomposition(data_file, start_time, end_time, time_granularity):
     global forecast_series
-    global last_timestamp
-    # Read data
-    df = pd.read_csv("24h_data.csv")
+
+    #Preprocessing
+    df = pd.read_csv(data_file + ".csv")
+    dc.aggregate(df)
+
+    split.to_timeframe(time_granularity)
+
+    #ready to use dataframe
+    df = pd.read_csv("granular_data_andy.csv")
+
+    ## cleaning up Files used
+    FILES_IN_USE = [i for i in os.listdir() if "andy" in i]
+    for file in FILES_IN_USE:
+        os.system(f"rm {file}")
+
+    timestamps = df["time"].tolist()
+    # Define the start and end dates of the desired range
+# Define the start and end dates of the desired range
+    start_time = pd.to_datetime(start_time).tz_localize('UTC')  # Convert start_time to Timestamp object
+    end_time = pd.to_datetime(end_time).tz_localize('UTC')      # Convert end_time to Timestamp object
+
+    if timestamps:
+        # Access timestamps[0] and timestamps[-1] only if the list is not empty
+        if (start_time < pd.to_datetime(timestamps[0])) or (start_time > pd.to_datetime(timestamps[-1])):
+            start_time = pd.to_datetime(timestamps[0])
+        if (end_time > pd.to_datetime(timestamps[-1])) or (end_time < pd.to_datetime(timestamps[0])):
+            end_time = pd.to_datetime(timestamps[-1])
+    else:
+        # Handle the case where timestamps list is empty
+        start_time = pd.to_datetime("2023-09-16 00:00:00")
+        end_time = pd.to_datetime("2023-10-17 00:00:00")
+        print("Warning: Timestamps list is empty.")
+
+    # Filter the DataFrame based on the date range
+    for i in range(len(df["time"])):
+
+        datetime_string = df["time"][i]
+
+        if "." not in datetime_string:
+            df["time"][i] += ".000000"
+    
+    df = df[(pd.to_datetime(df['time']) >= pd.to_datetime(start_time)) & (pd.to_datetime(df['time']) <= pd.to_datetime(end_time))]
+    df2 = df[(pd.to_datetime(df['time']) <= pd.to_datetime(end_time))]
+    dataframe2 = pd.Series(df2["95th"])
     dataframe = pd.Series(df["95th"])
+    
+    
+    #time_delta = int((len(df["95th"])/30)* 7)
+    time_delta = int((24/float(time_granularity)) * 7)
+    num_forecasts = int(time_delta/7)
+    if num_forecasts <=7:
+        num_forecasts = 7
 
     # Exponential Smoothing model
     ES = exponential_smoothing.ExponentialSmoothing
@@ -393,6 +451,7 @@ def generate_seasonaldecomposition(data_file):
     res = stlf.fit()
     forecasts = res.forecast(7)
 
+    
     # Append the forecasted values to the original data series
     last_timestamp = dataframe.index[-1]  # Convert to timestamp if not already
     forecast_index = [last_timestamp +  +i for i in range(1,8)]
@@ -405,8 +464,6 @@ def generate_seasonaldecomposition(data_file):
 
     # Overwrite the color of the last 7 points
     plt.plot(stream.index[-8:], stream[-8:], color="lightgreen",label = "Forecast")
-
-    y_median = np.median(stream[-8:].values)
 
     # Highlight the forecasted portion
     plt.axvline(x=last_timestamp, color='orange', label='Transition from data to forecast')
@@ -429,58 +486,271 @@ def generate_seasonaldecomposition(data_file):
     # Close figure to release memory
     plt.close()
 
-    return plot_base64_1, y_median
+    mean_pred = np.mean(forecast_series)
+
+    return plot_base64_1, mean_pred, forecast_series
 
 def generate_seasonaldecomposition_schedule(threshold):
-    start_time = pd.to_datetime(last_timestamp)
-    # Create a list to store the rows
-    rows = []
-    time_increment = pd.Timedelta(minutes=5)
+    forecast_series_ = forecast_series
 
-    # Iterate over each time point and compare with the threshold
-    for _, y_value in forecast_series.items():
-        above_median = "On" if y_value > float(threshold) else "Off"
-        rows.append({"Time": start_time, "Servers": above_median})
-        start_time += time_increment 
+    deviation = np.std(forecast_series_) 
+    upper_bound = float(threshold) + deviation
+    lower_bound = float(threshold) - deviation
+    # Create a DataFrame for the forecasts
 
-    # Create a DataFrame from the list of rows
-    server_on_off_df = pd.DataFrame(rows)
+    #forecast_series = forecast_series.reset_index()
+    forecast_series_ = forecast_series_.reset_index(drop=True)
+    turn_off = forecast_series_ <lower_bound
+    turn_on = forecast_series_ >upper_bound
 
-    server_on_off_df['Time'] = pd.to_datetime(server_on_off_df['Time']).dt.strftime('%H:%M')
 
-    server_on_off_df_html = server_on_off_df.to_html()
+
+    # Create a boolean mask for rows to turn off or turn on
+    turn_off = forecast_series_ < lower_bound
+    turn_on = forecast_series_ > upper_bound
+
+
+    # Create a new DataFrame with the forecast values and initialize the 'Action' column
+    action_df = pd.DataFrame({'Forecast': forecast_series_, 'Action': ''})
+
+    # Set 'Action' column based on conditions
+    action_df.loc[turn_off, 'Action'] = 'Turn Off'
+    action_df.loc[turn_on, 'Action'] = 'Turn On'
+
+
+    #
+    action_df['Action'] = action_df['Action'].where(action_df['Action'] != action_df['Action'].shift(), '')
+
+    # Filter out rows where 'Action' is empty string ''
+    action_df = action_df[action_df['Action'] != '']
+
+    # Identify rows where the action is the same as the previous action and mark them as empty string ''
+    action_df['Action'] = action_df['Action'].where(action_df['Action'] != action_df['Action'].shift(), '')
+
+    # Filter out rows where 'Action' is empty string '' again to keep only the first occurrence of each action
+    action_df = action_df[action_df['Action'] != '']
+
+    server_on_off_df_html = action_df.to_html()
 
     return server_on_off_df_html
+
     
-# Define LSTM Model
+timestamps = None
+
+def generate_timestamps(data_file):
+    global timestamps
+    df = pd.read_csv(data_file + ".csv")
+    df = df.fillna(0)
+
+    average_cpu = df.groupby('host')['CPU_95th_Perc'].mean().reset_index()
+    inactive_servers = average_cpu[average_cpu['CPU_95th_Perc'] == 0]['host'].unique()
+    active_data = df[~df['host'].isin(inactive_servers)]
+    data = active_data.groupby('_time')['CPU_95th_Perc'].mean().reset_index()
+    data.columns = ['ds', 'y']
+
+    data['ds'] = pd.to_datetime(data['ds']).dt.tz_localize(None)  # Remove timezone information
+
+    data['ds'] = pd.to_datetime(data['ds'])
+    
+    timestamps = data["ds"].tolist()
+
+    return timestamps[0], timestamps[-1]
+
+def generate_lstm_timestamps(data_file):
+
+    if data_file == "exportforuconn":
+        file_num = 1
+    else:
+        file_num = 2
+
+    if os.path.exists("LSTM_by_time_period" + str(file_num) + ".csv"):
+        pass
+    else:
+        editor1(data_file+".csv", "flipflap.csv")
+        editor2("flipflap.csv", "Cleaned_Data.csv")
+        aggregate_data(filepath="Cleaned_Data.csv", time_period="30min", exportname="LSTM_by_time_period" + str(file_num) + ".csv")
+
+    df = pd.read_csv("LSTM_by_time_period" + str(file_num) + ".csv", parse_dates=True)
+
+    timestamps = df["Timestamp"].tolist()
+ 
+    return timestamps[0], timestamps[-1]
+
 class LSTMModel(nn.Module):
     def __init__(self, input_size=1, hidden_layer_size=50, output_size=1):
         super().__init__()
-        self.hidden_layer_size = hidden_layer_size
+        self.hidden_layer_size = hidden_layer_size  # I found the optimal hidden layer size to be 50 (tested 50, 75, 100)
+        # defining the different layers of the LSTM model
         self.lstm = nn.LSTM(input_size, hidden_layer_size)
         self.linear = nn.Linear(hidden_layer_size, output_size)
-        self.hidden_cell = (torch.zeros(1, 1, self.hidden_layer_size),
-                            torch.zeros(1, 1, self.hidden_layer_size))
+        self.hidden_cell = (torch.zeros(1,1,self.hidden_layer_size),
+                            torch.zeros(1,1,self.hidden_layer_size))
 
     def forward(self, input_seq):
-        lstm_out, self.hidden_cell = self.lstm(input_seq.view(len(input_seq), 1, -1), self.hidden_cell)
+        # specifies how each pass through the model works
+        # Pytorch does this for me when the model is training, which is why it is never called explicitly in the code.
+        lstm_out, self.hidden_cell = self.lstm(input_seq.view(len(input_seq) ,1, -1), self.hidden_cell)
         predictions = self.linear(lstm_out.view(len(input_seq), -1))
         return predictions[-1]
+
+
+def editor1(csvPath='exportforuconn.csv', exportname="flipflap.csv"):
+    df = pd.read_csv(csvPath)
+    df = df.fillna(0)
+
+    timestamps = {}
+    iternum = 0
+    start = time.time()
+
+    for index, row in df.iterrows():
+        if row["_time"] in timestamps:
+            timestamps[row["_time"]][0].append(row["CPU_95th_Perc"])
+            timestamps[row["_time"]][1].append(row["process_count"])
+            timestamps[row["_time"]][2].append(row["Disk_Avg"])
+            timestamps[row["_time"]][3] += 1
+        else:
+            timestamps[row["_time"]] = [[row["CPU_95th_Perc"]],[row["process_count"]],[row["Disk_Avg"]],1]
+
+        iternum +=1
+        if (iternum % 5000) == 0:
+            print("iter:", iternum, " time elapsed:", time.time()-start)
+    TStamp = []
+    Avg_CPU_95 = []
+    Avg_Proc_Count = []
+    Avg_Disk_Avg = []
+    Num_Servers = []
+
+    start2 = time.time()
+    i = 0
+    for t, v in timestamps.items():
+        TStamp.append(t[0:16])
+        Avg_CPU_95.append(np.mean(v[0]))
+        Avg_Proc_Count.append(np.mean(v[1]))
+        Avg_Disk_Avg.append(np.mean(v[2]))
+        Num_Servers.append(v[3])
+
+        i +=1
+        if (i % 500) == 0:
+            print("iter:", i, " time elapsed:", time.time()-start2)
+
+    df2 = pd.DataFrame(
+        {'Timestamp' : TStamp,
+        'Avg_CPU_95' : Avg_CPU_95,
+        'Avg_Proc_Count' : Avg_Proc_Count,
+        'Avg_Disk_Avg' : Avg_Disk_Avg,
+        'Num_Servers' : Num_Servers,
+        })
+
+
+    df2.to_csv(exportname, mode='w', index=False)
+
+def editor2(csvPath="flipflap.csv", exportname="Cleaned_Data.csv"):
+    df = pd.read_csv(csvPath)
+
+    sun = {"24", "01", "08", "15"}
+    mon = {"18", "25", "02", "09", "16"}
+    tues = {"19", "26", "03", "10",}
+    wed = {"20", "27", "04", "11"}
+    thurs = {"21", "28", "05", "12"}
+    fri = {"22", "29", "06", "13"}
+    sat = {"23", "30", "07", "14"}
+
+
+    df["Total_Processes"] = ''
+    df["Hour"] = ''
+    df["Date"] = ''
+    df["Day_of_Week"] = ''
+
+    start = time.time()
+
+    for i in range(df.shape[0]):
+        tot_proc = df["Avg_Proc_Count"][i] * df["Num_Servers"][i]
+        df.loc[i, "Total_Processes"] = tot_proc
+
+        hour = df["Timestamp"][i][11:13]
+        df.loc[i, "Hour"] = hour
+
+        date = df["Timestamp"][i][8:10]
+        df.loc[i, "Date"] = date
+
+        if date in mon:
+            df.loc[i, "Day_of_Week"] = "mon"
+        elif date in sun:
+            df.loc[i, "Day_of_Week"] = "sun"
+        elif date in tues:
+            df.loc[i, "Day_of_Week"] = "tues"
+        elif date in wed:
+            df.loc[i, "Day_of_Week"] = "wed"
+        elif date in thurs:
+            df.loc[i, "Day_of_Week"] = "thurs"
+        elif date in fri:
+            df.loc[i, "Day_of_Week"] = "fri"
+        elif date in sat:
+            df.loc[i, "Day_of_Week"] = "sat"
+        else:       #date = 17
+            if df["Timestamp"][i][5:7] == "09":
+                df.loc[i, "Day_of_Week"] = "sun"
+            else:
+                df.loc[i, "Day_of_Week"] = "tues"
+        if i%500 == 0:
+            print("row number: ", i, "time elapsed: ", time.time()-start)
+    df.to_csv(exportname, index=False, mode='w')
+
+def half_hour_agg(csvPath="Cleaned_Data.csv", exportname="by_half_hour.csv"):
+
+    df = pd.read_csv(csvPath)
+
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+
+    df['Rounded_Timestamp'] = df['Timestamp'].dt.round('30min')
+
+    agg_df = df.groupby('Rounded_Timestamp').agg({
+        'Avg_CPU_95': 'mean',
+        'Avg_Proc_Count': 'mean',
+        'Avg_Disk_Avg': 'mean',
+        'Num_Servers': 'mean',
+        'Total_Processes': 'mean',
+        'Hour': 'first',
+        'Date': 'first',
+        'Day_of_Week': 'first'}).reset_index()
+
+    agg_df = agg_df.rename(columns={'Rounded_Timestamp': 'Timestamp'})
+
+
+    agg_df.to_csv(exportname, index=False, mode='w')
+
+def aggregate_data(filepath, time_period='30min', exportname="LSTM_by_time_period.csv"):
+    # This function aggregates data (can be either file) based on time period chosen by user
     
-# Generate LSTM (Long Short-Term Memory) Plots
-def generate_lstm(data_file):
-    df = pd.read_csv('by_half_hour.csv', parse_dates=True)
-    timestamps = df["Timestamp"].tolist()
-    cpu_data = df["Avg_CPU_95"].tolist()
-    sequence_length = 12
-    train_test_split = 0.75
+    df = pd.read_csv(filepath)
+
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+
+    df['Rounded_Timestamp'] = df['Timestamp'].dt.round(time_period)
+
+    agg_df = df.groupby('Rounded_Timestamp').agg({
+        'Avg_CPU_95': 'mean',
+        'Avg_Proc_Count': 'mean',
+        'Avg_Disk_Avg': 'mean',
+        'Num_Servers': 'mean',
+        'Total_Processes': 'mean',
+        'Hour': 'first',
+        'Date': 'first',
+        'Day_of_Week': 'first'}).reset_index()
+
+    agg_df = agg_df.rename(columns={'Rounded_Timestamp': 'Timestamp'})
+
+    agg_df.to_csv(exportname, index=False, mode='w')
+
+def prepare_data(data, sequence_length=12, train_test_split=.75):
     scaler = MinMaxScaler(feature_range=(0, 1))
-    data_normalized = scaler.fit_transform(np.array(cpu_data).reshape(-1, 1)).flatten()
+
+    data_normalized = scaler.fit_transform(np.array(data).reshape(-1, 1)).flatten()
 
     data_X, data_y = [], []
     for i in range(len(data_normalized) - sequence_length):
-        data_X.append(data_normalized[i:i + sequence_length])
-        data_y.append(data_normalized[i + sequence_length])
+        data_X.append(data_normalized[i:i+sequence_length])
+        data_y.append(data_normalized[i+sequence_length])
 
     data_X = np.array(data_X)
     data_y = np.array(data_y)
@@ -497,43 +767,117 @@ def generate_lstm(data_file):
 
     train_loader = (X_train, y_train)
     test_loader = (X_test, y_test)
+    return train_loader, test_loader, split, sequence_length
 
-    model = LSTMModel(hidden_layer_size=50)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+def Training(model, optimizer, train_loader, num_epochs=20):
+    start = time.time()
     loss_function = nn.MSELoss()
-    num_epochs = 20
+    # MSE loss makes the most sense imo
 
     for i in range(num_epochs):
         for seq, labels in zip(train_loader[0], train_loader[1]):
-            optimizer.zero_grad()
+            optimizer.zero_grad()         # reset gradient from pervious iterations
+
+            # reset hidden layer
             model.hidden_cell = (torch.zeros(1, 1, model.hidden_layer_size),
-                                 torch.zeros(1, 1, model.hidden_layer_size))
-            y_pred = model(seq)
-            single_loss = loss_function(y_pred, labels)
-            single_loss.backward()
-            optimizer.step()
-
-    model.eval()
-    y_pred = []
-    for seq in test_loader[0]:
-        with torch.no_grad():
-            model.hidden = (torch.zeros(1, 1, model.hidden_layer_size),
                             torch.zeros(1, 1, model.hidden_layer_size))
-            y_pred.append(model(seq).item())
 
+            y_pred = model(seq)           # performs prediction on seq using the model
+            single_loss = loss_function(y_pred, labels)     # calculate mse
+            single_loss.backward()        # backpropogation
+            optimizer.step()              # update optimizer weights
+
+        if i%3 == 0:
+            print("epoch: {:3} loss: {:10.8f} time elapsed: {}".format(
+                i, single_loss.item(), time.time()-start))
+
+    return model
+
+
+y_pred = None
+timestmaps = None
+
+# Generate LSTM (Long Short-Term Memory) Plots
+def generate_lstm(data_file, start_time, end_time, time_granularity):
+    global y_pred
+    global timestamps
+
+    if os.path.exists('by_half_hour.csv'):
+        pass
+    else:
+        editor1("exportforuconn.csv", "flipflap.csv")
+        editor2("flipflap.csv", "Cleaned_Data.csv")
+        half_hour_agg("Cleaned_Data.csv", "by_half_hour.csv")
+
+    editor1(data_file+".csv", "flipflap.csv")
+    editor2("flipflap.csv", "Cleaned_Data.csv")
+    aggregate_data(filepath="Cleaned_Data.csv", time_period=time_granularity, exportname="LSTM_by_time_period.csv")
+
+    df = pd.read_csv("by_half_hour.csv",  parse_dates=True)
+    timestamp_list = df["Timestamp"].tolist()
+    timestamps = pd.to_datetime(timestamp_list)
+    cpu_data = df["Avg_CPU_95"].tolist()
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+
+    train, test_loader, split, sequence_length = prepare_data(cpu_data, sequence_length=12, train_test_split=.75)
+    model = LSTMModel(hidden_layer_size=50)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.0001)
+
+    result = Training(model, optimizer, train, num_epochs=25)
+
+    df2 = pd.read_csv('LSTM_by_time_period.csv',  parse_dates=True)
+    timestamps2_list = df2["Timestamp"].tolist()
+    timestamps2 = pd.to_datetime(timestamps2_list)
+    cpu_data2 = df2["Avg_CPU_95"].tolist()
+
+    train2, test2, split2, seq_len2 = prepare_data(cpu_data2, train_test_split=0)
+
+
+    timestamps2 = timestamps2[0+split2+seq_len2:]
+
+    try:
+        start_time = pd.to_datetime(start_time)
+    except ValueError:
+        start_time = pd.to_datetime(timestamps2[0])
+
+    try:
+        end_time = pd.to_datetime(end_time)
+    except ValueError:
+        end_time = pd.to_datetime(timestamps2[-1])
+
+
+    if (start_time < pd.to_datetime(timestamps2[0])) or (start_time > pd.to_datetime(timestamps2[-1])):
+        start_time=pd.to_datetime(timestamps2[0])
+    if (end_time > pd.to_datetime(timestamps2[-1])) or (end_time < pd.to_datetime(timestamps2[0])):
+        end_time=pd.to_datetime(timestamps2[-1])
+
+    start_timestamp_index = np.argmin(np.absolute(pd.to_datetime(timestamps2) - start_time))
+    end_timestamp_index = np.argmin(np.absolute(pd.to_datetime(timestamps2) - end_time))
+
+    result.eval()
+    y_pred = []
+    for seq in test2[0]:  # Iter over the test loader
+        with torch.no_grad():
+            # reset the hidden layer for each seq, then append predicted value to y_pred
+            result.hidden = (torch.zeros(1, 1, result.hidden_layer_size),
+                            torch.zeros(1, 1, result.hidden_layer_size))
+            y_pred.append(result(seq).item())
+
+    # transform y_pred to be similar to y_test
+    scaler.fit_transform(np.array(cpu_data2).reshape(-1, 1)).flatten()
     y_pred_trans = scaler.inverse_transform(np.array(y_pred).reshape(-1, 1)).flatten()
-    y_test = test_loader[1]
-
-    mse = mean_squared_error(scaler.inverse_transform(y_test.reshape(-1, 1)), y_pred_trans)
-    rmse = np.sqrt(mse)
+    y_test = test2[1]
 
     plt.figure(figsize=(15, 6), facecolor='#f8f8f8')
-    plt.plot(timestamps[split + sequence_length:], y_pred_trans, label='Predicted')
-    plt.plot(timestamps[split + sequence_length:], scaler.inverse_transform(y_test.reshape(-1, 1)).flatten(), label='Real')
+    plt.plot(pd.to_datetime(timestamps2)[start_timestamp_index:end_timestamp_index], y_pred_trans[start_timestamp_index:end_timestamp_index], label='Predicted')
+    plt.plot(pd.to_datetime(timestamps2)[start_timestamp_index:end_timestamp_index], scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()[start_timestamp_index:end_timestamp_index], label='Real')
     plt.xlabel('Timestamp')
     plt.ylabel('CPU Usage')
     plt.title('Real vs Predicted CPU Usage')
     plt.legend()
+    plt.savefig("Limited_Time_Graph")
+    plt.show()
 
     plot_io = BytesIO()
     plt.savefig(plot_io, format='png')
@@ -541,26 +885,345 @@ def generate_lstm(data_file):
     plot_base64_1 = base64.b64encode(plot_io.getvalue()).decode('utf-8')
     plt.close()
 
-    return plot_base64_1
+    periods=48
+    last_24h_pred = y_pred[-periods:]
+    median_cpu = statistics.median(last_24h_pred)
 
-def generate_ltsm_schedule(threshold):
-    "fix"
-    server_on_off_df_html = None
+    return plot_base64_1, median_cpu
+
+
+def generate_lstm_schedule(threshold):
+    periods=48
+    last_24h_pred = y_pred[-periods:]
+    last_24h_time = timestamps[-periods:]
+
+    on_off_df = pd.DataFrame(last_24h_time, columns=['Time'])
+    on_off_df['Servers'] = False
+
+    for index, row in on_off_df.iterrows():
+        if last_24h_pred[index] > float(threshold):
+            on_off_df.at[index, 'Servers'] = True
+
+    server_on_off_df_html = on_off_df.to_html()
     return server_on_off_df_html
+
+def generate_amomaly(data_file):
+    df = pd.read_csv(data_file + ".csv")
+
+    columns_to_remove = ['Load_Avg_1min_NIX', 'process_count', 'Disk_Max', 'TXMbps', 'RXMbps', 'CPU_Max', 'Mem_Max']
+    df.drop(columns=columns_to_remove, inplace=True)
+
+    df = df[df['CPU_95th_Perc'] != 0]
+    df = df.dropna(subset=["CPU_95th_Perc"])
+
+    df = df[df['Mem_Avg'] != 0]
+    df = df.dropna(subset=["Mem_Avg"])
+
+    df = df[df['Disk_Avg'] != 0]
+    df = df.dropna(subset=["Disk_Avg"])
+
+    # Define thresholds for anomaly detection
+    mem_thresholds = {'low': 80, 'mid': 90, 'high': 99}
+    cpu_thresholds = {'low': 80, 'mid': 90, 'high': 99}
+    disk_thresholds = {'low': 80, 'mid': 90, 'high': 99}
+
+    df.loc[df['Mem_Avg'] > mem_thresholds['high'], 'Mem_Level'] = 'High'
+    df.loc[(df['Mem_Avg'] <= mem_thresholds['high']) & (df['Mem_Avg'] > mem_thresholds['mid']), 'Mem_Level'] = 'Mid'
+    df.loc[(df['Mem_Avg'] > mem_thresholds['low']) & (df['Mem_Avg'] <= mem_thresholds['mid']), 'Mem_Level'] = 'Low'
+
+    df.loc[df['CPU_95th_Perc'] > cpu_thresholds['high'], 'CPU_Level'] = 'High'
+    df.loc[(df['CPU_95th_Perc'] <= cpu_thresholds['high']) & (df['CPU_95th_Perc'] > cpu_thresholds['mid']), 'CPU_Level'] = 'Mid'
+    df.loc[(df['CPU_95th_Perc'] > cpu_thresholds['low']) & (df['CPU_95th_Perc'] <= cpu_thresholds['mid']), 'CPU_Level'] = 'Low'
+
+    df.loc[df['Disk_Avg'] > disk_thresholds['high'], 'Disk_Level'] = 'High'
+    df.loc[(df['Disk_Avg'] <= disk_thresholds['high']) & (df['Disk_Avg'] > disk_thresholds['mid']), 'Disk_Level'] = 'Mid'
+    df.loc[(df['Disk_Avg'] > disk_thresholds['low']) & (df['Disk_Avg'] <= disk_thresholds['mid']), 'Disk_Level'] = 'Low'
+
+
+    # Concatenate all anomalies
+    all_anomalies = df[['host', '_time', 'Mem_Avg', 'CPU_95th_Perc', 'Disk_Avg', 'Mem_Level', 'CPU_Level', 'Disk_Level']]
+
+    # Count the number of anomalies for each metric
+    mem_anomaly_counts = all_anomalies['Mem_Level'].value_counts().to_dict()
+    cpu_anomaly_counts = all_anomalies['CPU_Level'].value_counts().to_dict()
+    disk_anomaly_counts = all_anomalies['Disk_Level'].value_counts().to_dict()
+
+    # Create lists for anomaly counts and metric names
+    anomaly_counts = [mem_anomaly_counts, cpu_anomaly_counts, disk_anomaly_counts]
+    metrics = ['Mem_Avg', 'CPU_95th_Perc', 'Disk_Avg']
+
+    # Define colors for each anomaly level
+    colors = {'Low': 'green', 'Mid': 'orange', 'High': 'red'}
+
+    # Create subplots for each metric
+    fig1, axs = plt.subplots(3, 1, figsize=(12, 10))
+
+    # Plot bar chart for each metric
+    for i, metric in enumerate(metrics):
+        counts = anomaly_counts[i]
+        # Filter out levels other than 'Low', 'Mid', and 'High' from counts
+        filtered_counts = {level: count for level, count in counts.items() if level in colors}
+        axs[i].bar(filtered_counts.keys(), filtered_counts.values(), color=[colors[level] for level in filtered_counts.keys()])
+        axs[i].set_title(f'Anomalies for {metric}')
+        axs[i].set_xlabel('Anomaly Level')
+        axs[i].set_ylabel('Count')
+
+    plt.tight_layout()
+    plt.show()
+
+
+    plot_io1 = BytesIO()
+    fig1.savefig(plot_io1, format='png')
+    plot_io1.seek(0)
+
+    # Sum the occurrences of high-level anomalies across all metrics for each server
+    all_anomalies['Total_High_Anomalies'] = (
+        (all_anomalies['Mem_Level'] == 'High').astype(int) +
+        (all_anomalies['CPU_Level'] == 'High').astype(int) +
+        (all_anomalies['Disk_Level'] == 'High').astype(int)
+    )
+
+    # Group by server and sum the total high-level anomalies
+    server_anomaly_counts = (
+        all_anomalies.groupby('host')['Total_High_Anomalies']
+        .sum()
+        .reset_index()
+    )
+
+    # Exclude servers with no anomalies
+    server_anomaly_counts = server_anomaly_counts[server_anomaly_counts['Total_High_Anomalies'] > 0]
+
+    # Sort the dataframe by the total high-level anomalies
+    server_anomaly_counts = server_anomaly_counts.sort_values(by='Total_High_Anomalies', ascending=False)
+
+    # Generate bar chart
+    fig2 = plt.figure(figsize=(12, 6))
+    plt.bar(server_anomaly_counts['host'], server_anomaly_counts['Total_High_Anomalies'], color='red')
+    plt.xlabel('Servers')
+    plt.ylabel('Total High-Level Anomalies')
+    plt.title('Servers with Highest Combined High-Level Anomalies (Excluding Servers with No Anomalies)')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+    plot_io2 = BytesIO()
+    fig2.savefig(plot_io2, format='png')
+    plot_io2.seek(0)
+
+    plot_base64_1 = base64.b64encode(plot_io1.getvalue()).decode('utf-8')
+    plot_base64_2 = base64.b64encode(plot_io2.getvalue()).decode('utf-8')
+
+    # Find the server with the highest number of anomalies
+    server_with_highest_anomalies = server_anomaly_counts.iloc[0]['host']
+
+    # Filter the DataFrame to get anomaly metric counts for the server with the highest number of anomalies
+    metrics_for_highest_anomalies = all_anomalies[all_anomalies['host'] == server_with_highest_anomalies][['Mem_Level', 'CPU_Level', 'Disk_Level']]
+
+    # Count the occurrences of each anomaly level for each metric
+    metric_counts = {
+        'Mem_Avg': metrics_for_highest_anomalies['Mem_Level'].value_counts().to_dict(),
+        'CPU_95th_Perc': metrics_for_highest_anomalies['CPU_Level'].value_counts().to_dict(),
+        'Disk_Avg': metrics_for_highest_anomalies['Disk_Level'].value_counts().to_dict()
+    }
+
+    # Data preparation
+    metric_names = ['Mem_Avg', 'CPU_95th_Perc', 'Disk_Avg']
+    metric_labels = ['Memory', 'CPU', 'Disk']
+    metric_colors = {'low': 'lightgreen', 'mid': 'orange', 'high': 'red'}
+
+    # Plotting
+    fig3, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 5), sharey=True)
+
+    for i, metric in enumerate(metric_names):
+        ax = axes[i]
+        counts = metric_counts[metric]
+        
+        # Filter out 'nan' values from counts
+        filtered_counts = {level: count for level, count in counts.items() if pd.notna(level)}
+        
+        # Plot using specified color for non-'nan' values
+        ax.bar(filtered_counts.keys(), filtered_counts.values(), color=[metric_colors[level.lower()] for level in filtered_counts.keys() if level.lower() in metric_colors])
+        
+        ax.set_title(f"{metric} Anomalies for '{server_with_highest_anomalies}'")
+        ax.set_xlabel('Anomaly Level')
+        ax.set_ylabel('Count')
+        ax.tick_params(axis='x')
+
+    plt.tight_layout()
+    plt.show()
+
+    plot_io3 = BytesIO()
+    fig3.savefig(plot_io3, format='png')
+    plot_io3.seek(0)
+
+    # Convert '_time' to datetime if it's not already in datetime format
+    all_anomalies.loc[:, '_time'] = pd.to_datetime(all_anomalies['_time'])
+
+    # Filter anomalies to include "High", "Mid", and "Low" anomalies for each metric
+    high_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'High']
+    mid_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'Mid']
+    low_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'Low']
+    high_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'High']
+    mid_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'Mid']
+    low_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'Low']
+    high_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'High']
+    mid_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'Mid']
+    low_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'Low']
+
+    # Aggregate "High", "Mid", and "Low" anomalies by day for each metric
+    high_mem_anomalies_by_day = high_mem_anomalies.groupby(pd.to_datetime((high_mem_anomalies['_time'])).dt.date).size()
+    mid_mem_anomalies_by_day = mid_mem_anomalies.groupby(pd.to_datetime(mid_mem_anomalies['_time']).dt.date).size()
+    low_mem_anomalies_by_day = low_mem_anomalies.groupby(pd.to_datetime(low_mem_anomalies['_time']).dt.date).size()
+    high_cpu_anomalies_by_day = high_cpu_anomalies.groupby(pd.to_datetime(high_cpu_anomalies['_time']).dt.date).size()
+    mid_cpu_anomalies_by_day = mid_cpu_anomalies.groupby(pd.to_datetime(mid_cpu_anomalies['_time']).dt.date).size()
+    low_cpu_anomalies_by_day = low_cpu_anomalies.groupby(pd.to_datetime(low_cpu_anomalies['_time']).dt.date).size()
+    high_disk_anomalies_by_day = high_disk_anomalies.groupby(pd.to_datetime(high_disk_anomalies['_time']).dt.date).size()
+    mid_disk_anomalies_by_day = mid_disk_anomalies.groupby(pd.to_datetime(mid_disk_anomalies['_time']).dt.date).size()
+    low_disk_anomalies_by_day = low_disk_anomalies.groupby(pd.to_datetime(low_disk_anomalies['_time']).dt.date).size()
+
+    # Plotting
+    fig4 = plt.figure(figsize=(18, 12))
+
+    # Mem_Level Anomalies
+    plt.subplot(3, 1, 1)
+    high_mem_anomalies_by_day.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_mem_anomalies_by_day.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_mem_anomalies_by_day.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of Mem_Level Anomalies by Day')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Mem_Level Anomalies')
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+
+    # CPU_Level Anomalies
+    plt.subplot(3, 1, 2)
+    high_cpu_anomalies_by_day.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_cpu_anomalies_by_day.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_cpu_anomalies_by_day.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of CPU_Level Anomalies by Day')
+    plt.xlabel('Date')
+    plt.ylabel('Number of CPU_Level Anomalies')
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+
+    # Disk_Level Anomalies
+    plt.subplot(3, 1, 3)
+    high_disk_anomalies_by_day.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_disk_anomalies_by_day.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_disk_anomalies_by_day.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of Disk_Level Anomalies by Day')
+    plt.xlabel('Date')
+    plt.ylabel('Number of Disk_Level Anomalies')
+    plt.xticks(rotation=45)
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+    plot_io4 = BytesIO()
+    fig4.savefig(plot_io4, format='png')
+    plot_io4.seek(0)
+
+
+    # Convert '_time' to datetime if it's not already in datetime format
+    all_anomalies.loc[:, '_time'] = pd.to_datetime(all_anomalies['_time'])
+
+    # Extract hour component from the timestamp
+    all_anomalies.loc[:, 'hour'] = pd.to_datetime(all_anomalies['_time']).dt.hour
+
+    # Filter anomalies to include "High", "Mid", and "Low" anomalies for each metric
+    high_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'High']
+    mid_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'Mid']
+    low_mem_anomalies = all_anomalies[all_anomalies['Mem_Level'] == 'Low']
+    high_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'High']
+    mid_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'Mid']
+    low_cpu_anomalies = all_anomalies[all_anomalies['CPU_Level'] == 'Low']
+    high_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'High']
+    mid_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'Mid']
+    low_disk_anomalies = all_anomalies[all_anomalies['Disk_Level'] == 'Low']
+
+    # Aggregate "High", "Mid", and "Low" anomalies by hour for each metric
+    high_mem_anomalies_by_hour = high_mem_anomalies.groupby('hour').size()
+    mid_mem_anomalies_by_hour = mid_mem_anomalies.groupby('hour').size()
+    low_mem_anomalies_by_hour = low_mem_anomalies.groupby('hour').size()
+    high_cpu_anomalies_by_hour = high_cpu_anomalies.groupby('hour').size()
+    mid_cpu_anomalies_by_hour = mid_cpu_anomalies.groupby('hour').size()
+    low_cpu_anomalies_by_hour = low_cpu_anomalies.groupby('hour').size()
+    high_disk_anomalies_by_hour = high_disk_anomalies.groupby('hour').size()
+    mid_disk_anomalies_by_hour = mid_disk_anomalies.groupby('hour').size()
+    low_disk_anomalies_by_hour = low_disk_anomalies.groupby('hour').size()
+
+    # Plotting
+    fig5 = plt.figure(figsize=(18, 12))
+
+    # Mem_Level Anomalies
+    plt.subplot(3, 1, 1)
+    high_mem_anomalies_by_hour.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_mem_anomalies_by_hour.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_mem_anomalies_by_hour.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of Mem_Level Anomalies by Hour')
+    plt.xlabel('Hour of the Day')
+    plt.ylabel('Number of Mem_Level Anomalies')
+    plt.xticks(range(0, 24), ['{}{}'.format(x % 12 or 12, 'am' if x < 12 else 'pm') for x in range(0, 24)])
+    plt.legend()
+    plt.grid(True)
+
+    # CPU_Level Anomalies
+    plt.subplot(3, 1, 2)
+    high_cpu_anomalies_by_hour.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_cpu_anomalies_by_hour.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_cpu_anomalies_by_hour.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of CPU_Level Anomalies by Hour')
+    plt.xlabel('Hour of the Day')
+    plt.ylabel('Number of CPU_Level Anomalies')
+    plt.xticks(range(0, 24), ['{}{}'.format(x % 12 or 12, 'am' if x < 12 else 'pm') for x in range(0, 24)])
+    plt.legend()
+    plt.grid(True)
+
+    # Disk_Level Anomalies
+    plt.subplot(3, 1, 3)
+    high_disk_anomalies_by_hour.plot(kind='line', color='red', marker='o', linestyle='-', label='High')
+    mid_disk_anomalies_by_hour.plot(kind='line', color='orange', marker='o', linestyle='-', label='Mid')
+    low_disk_anomalies_by_hour.plot(kind='line', color='green', marker='o', linestyle='-', label='Low')
+    plt.title('Number of Disk_Level Anomalies by Hour')
+    plt.xlabel('Hour of the Day')
+    plt.ylabel('Number of Disk_Level Anomalies')
+    plt.xticks(range(0, 24), ['{}{}'.format(x % 12 or 12, 'am' if x < 12 else 'pm') for x in range(0, 24)])
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+    plot_io5 = BytesIO()
+    fig5.savefig(plot_io5, format='png')
+    plot_io5.seek(0)
+
+    plot_base64_3 = base64.b64encode(plot_io3.getvalue()).decode('utf-8')
+    plot_base64_4 = base64.b64encode(plot_io4.getvalue()).decode('utf-8')
+    plot_base64_5 = base64.b64encode(plot_io5.getvalue()).decode('utf-8')
+
+    return plot_base64_1, plot_base64_2, plot_base64_3, plot_base64_4, plot_base64_5
+
+
 
 # Run Algorithm
 @app.route('/run-algorithm', methods=['POST'])
 def run_algorithm():
     if request.method == 'POST':
         algorithm = request.json.get('algorithm')
-        data_file = request.json.get('data_file')
-        return jsonify({'algorithm': algorithm, 'data_file': data_file})
+        return jsonify({'algorithm': algorithm})
     
 @app.route('/run-prophet', methods=['POST'])
 def run_prophet():
     if request.method == 'POST':
+        start_time = request.json.get('start_time')
+        end_time = request.json.get('end_time')
         data_file = request.json.get('data_file')
-        plot_prophet = generate_prophet(data_file)
+        plot_prophet = generate_prophet(data_file, start_time, end_time)
         return jsonify({'plot_prophet': [plot_prophet[0], plot_prophet[1], plot_prophet[2]]})
     
 @app.route('/run-prophet-schedule', methods=['POST'])
@@ -573,8 +1236,11 @@ def run_prophet_schedule():
 @app.route('/run-seasonaldecomposition', methods=['POST'])
 def run_seasonaldecomposition():
     if request.method == 'POST':
+        start_time = request.json.get('start_time')
+        end_time = request.json.get('end_time')
         data_file = request.json.get('data_file')
-        plot_seasonaldecomposition = generate_seasonaldecomposition(data_file)
+        time_granularity = request.json.get('time_granularity')
+        plot_seasonaldecomposition = generate_seasonaldecomposition(data_file, start_time, end_time, time_granularity)
         return jsonify({'plot_seasonaldecomposition': [plot_seasonaldecomposition[0], plot_seasonaldecomposition[1]]})
     
 @app.route('/run-seasonaldecomposition-schedule', methods=['POST'])
@@ -583,19 +1249,37 @@ def run_seasonaldecomposition_schedule():
         threshold = request.json.get('threshold')
         server_on_off_df_html = generate_seasonaldecomposition_schedule(threshold)
         return jsonify({'server_on_off_df_html': server_on_off_df_html})
+    
+@app.route('/run-times', methods=['POST'])
+def run_times():
+    if request.method == 'POST':
+        data_file = request.json.get('data_file')
+        timestamps = generate_timestamps(data_file)
+        return jsonify({'timestamps': [timestamps[0], timestamps[1]]})
+    
+@app.route('/run-lstm-times', methods=['POST'])
+def run_lstm_times():
+    if request.method == 'POST':
+        data_file = request.json.get('data_file')
+        timestamps = generate_lstm_timestamps(data_file)
+        return jsonify({'timestamps': [timestamps[0], timestamps[1]]})
+    
 
 @app.route('/run-lstm', methods=['POST'])
 def run_lstm():
     if request.method == 'POST':
+        start_time = request.json.get('start_time')
+        end_time = request.json.get('end_time')
         data_file = request.json.get('data_file')
-        plot_lstm = generate_lstm(data_file)
-        return jsonify({'plot_lstm': plot_lstm})
+        time_granularity = request.json.get('time_granularity')
+        plot_lstm = generate_lstm(data_file, start_time, end_time, time_granularity)
+        return jsonify({'plot_lstm': [plot_lstm[0], plot_lstm[1]]})
     
-@app.route('/run-ltsm-schedule', methods=['POST'])
-def run_ltsm_schedule():
+@app.route('/run-lstm-schedule', methods=['POST'])
+def run_lstm_schedule():
     if request.method == 'POST':
         threshold = request.json.get('threshold')
-        server_on_off_df_html = generate_ltsm_schedule(threshold)
+        server_on_off_df_html = generate_lstm_schedule(threshold)
         return jsonify({'server_on_off_df_html': server_on_off_df_html})
         
 @app.route('/run-cluster-graph', methods=['POST'])
@@ -605,7 +1289,8 @@ def run_cluster_graph():
         start_time = request.json.get('start_time')
         end_time = request.json.get('end_time')
         data_file = request.json.get('data_file')
-        plot_data = generate_plot(day, start_time, end_time, data_file)
+        time_granularity = request.json.get('time_granularity')
+        plot_data = generate_plot(day, start_time, end_time, data_file, time_granularity)
         return jsonify({'plot_data': [plot_data[0], plot_data[1]]})
     
 @app.route('/run-cluster-schedule', methods=['POST'])
@@ -621,6 +1306,14 @@ def run_cluster_results():
         find_servers = request.json.get('find_servers')
         results_html = generate_cluster_results(find_servers)
         return jsonify({'results_html': results_html})
+
+@app.route('/run-anomaly', methods=['POST'])
+def run_anomaly():
+    if request.method == 'POST':
+        data_file = request.json.get('data_file')
+        plot_anomaly = generate_amomaly(data_file)
+        return jsonify({'plot_anomaly': [plot_anomaly[0], plot_anomaly[1], plot_anomaly[2], plot_anomaly[3], plot_anomaly[4]]}) 
+
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
