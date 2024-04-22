@@ -7,43 +7,49 @@ from statsmodels.tsa.statespace import exponential_smoothing
 from numpy import mean,std
 import datacleaning as dc
 import time_splitter as split
+from statsmodels.tsa.seasonal import seasonal_decompose
 # Read data
 
-def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
+def generate_seasonaldecomposition(data_file,time_frame,time_granularity,indiv_server=None):
 
     #Preprocessing
     df = pd.read_csv(data_file + ".csv")
-    dc.aggregate(df)
+    dc.aggregate(df,indiv_server)
     split.to_timeframe(time_granularity)
     #ready to use dataframe
     df = pd.read_csv("granular_data_andy.csv")
-
+    df = df.fillna(0)
         ## cleaning up Files used
     FILES_IN_USE = [i for i in os.listdir() if "andy" in i]
     for file in FILES_IN_USE:
         os.system(f"rm {file}")
-
+        pass
     start_date,end_date = time_frame
 
 
     # Define the start and end dates of the desired range
 
     # Filter the DataFrame based on the date range
-    df = df[(df['time'] >= start_date) & (df['time'] <= end_date)]
     df2 = df[(df['time'] <= end_date)]
+    df = df[(df['time'] >= start_date) & (df['time'] <= end_date)]
     dataframe2 = pd.Series(df2["95th"])
     dataframe = pd.Series(df["95th"])
     #time_delta = int((len(df["95th"])/30)* 7)
     time_delta = int((24/time_granularity) * 7)
     num_forecasts = int(time_delta/7)
-    if num_forecasts <=7:num_forecasts = 7
-  
+    if num_forecasts <=7:num_forecasts = 14
     # Exponential Smoothing model
     ES = exponential_smoothing.ExponentialSmoothing
     config = {"trend": True}
     stlf = STLForecast(dataframe2, ES, model_kwargs=config, period=time_delta)
     res = stlf.fit()
-    forecasts = res.forecast(num_forecasts)
+
+    try: 
+        forecasts = res.forecast(num_forecasts)
+    except:
+        forecasts = pd.Series([0 for i in range(num_forecasts)])
+        print(forecasts)
+    print(forecasts)
     # Append the forecasted values to the original data series
     last_timestamp = dataframe.index[-1]  # Convert to timestamp if not already
     forecast_index = [last_timestamp  +i for i in range(1,num_forecasts+1)]
@@ -51,6 +57,16 @@ def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
     forecast_series = forecasts
     stream = dataframe._append(forecast_series)
     if len(stream) > 300: stream = stream[-len(stream)//8:]
+
+
+
+
+
+
+    ####
+
+
+
 
     plt.figure(figsize=(15, 8)) 
     # Plot the entire stream with a single color
@@ -109,4 +125,4 @@ def generate_seasonaldecomposition(data_file,time_frame,time_granularity):
     print(action_df)
 
 
-generate_seasonaldecomposition("export",('2023-09-16 00:00:00','2023-10-17 00:00:00'),time_granularity= 24 )
+generate_seasonaldecomposition("export",('2023-09-16 00:00:00','2023-10-17 00:00:00'),time_granularity= 4,indiv_server= None)
