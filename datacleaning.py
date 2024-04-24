@@ -7,11 +7,15 @@ def averaging(df):
     inactives = grouped[grouped <= 0.1].index.tolist()
     return set(inactives)
 
-def aggregate(df):
+def aggregate(df,indiv_server):
+    if indiv_server:df = df[df["host"] == indiv_server]
     df = df.fillna(0)
     inactives = averaging(df)
-    df_active = df[~df['host'].isin(inactives)]
+    if indiv_server:
+        df_active = df
+    else:
+        df_active = df[~df['host'].isin(inactives)]
     aggregated = df_active.groupby('_time')['CPU_95th_Perc'].mean().reset_index()
     aggregated.rename(columns={'_time': 'time', 'CPU_95th_Perc': '95th'}, inplace=True)
-    aggregated.to_csv("aggregated_clean_andy.csv", index=False, mode="w")
+    aggregated.to_csv("aggregated_clean_andy.csv", index=False, mode="a")
 

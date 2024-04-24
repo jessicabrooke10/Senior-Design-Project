@@ -249,16 +249,16 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Algorithm Analysis Tab</strong></p>
-                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph which predicts CPU usage of all servers at specified times. Next it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
+                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph, which predicts CPU usage of all servers at specified times. Next, it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
                                             The way this works is if the predicted CPU usage at a certain time is under the threshold, the server will be turned off, otherwise it will be turned on. To help the user choose a threshold value, we prepopulated the input value with the median of all predicted CPU values that the models came up with. 
                                             As the threshold changes so does the schedule. Lastly, the user may be able to input a CSV file so we may come up with different schedules based on the information provided. </p>
-                                        <p> For the LSTM & Prophet Model we also allow the user to choose the time granularity which offers the users to have the models make predictions based on grouped sets of instants
+                                        <p> For the LSTM & Prophet Model we also allow the user to choose the time granularity, which offers the users to have the models make predictions based on grouped sets of instants
                                             from a time domain. (Ex. Every 5minutes, hour, or daily)
                                         </p>
                                         <p> Note that the LSTM & Prophet Model produce schedules that tell the user when ALL servers should be on or off during a specific time. The Seasonal Decomposition Model schedule only has two values,
                                             that dictate a change of state from on to off or off to on.</p>
                                         <p>Times to Run: </p>
-                                        <p class="indented2">Seasonal Decomposition Model: 56 seconds</p>
+                                        <p class="indented2">Seasonal Decomposition Model: 3.48 seconds</p>
                                         <p class="indented2">LSTM Model: 2 minutes</p>
                                         <p class="indented2">Prophet Model: 8 seconds</p>
                                     </div>
@@ -267,7 +267,7 @@
                                     <div class="col-md-12">
                                         <p><strong>Cluster Tab</strong></p>
                                         <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, a end time, and a time_granularity (groups data based on time the user chose, ex.hourly). Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
-                                            group together servers based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next based on these groupings a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
+                                            group servers together based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next, based on these groupings, a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
                                             To help the user choose a threshold value, we prepopulated the input with the median values across all clusters. Using the threshold value the schedule will either turn on the group of servers if their CPU percentage is higher than the threshold or turn it off otherwise. Lastly, since
                                             the clustering algorithm groups servers together, to find the servers in each group you can select the group number and a table will display the server belonging to that group.
                                         </p>
@@ -278,7 +278,7 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Anomaly Tab</strong></p>
-                                        <p>Click on the anomaly detection tab to identify anomalous activity. Using statistical techniques, it identifies patterns diverging from expected behavior. The code includes features for data preprocessing, ensuring clean data ready for analysis. It extracts relevant metrics such as CPU usage, memory consumption, and disk activity. 
+                                        <p>Click on the anomaly detection tab to identify anomalous activity. Using statistical techniques, it identifies patterns diverging from expected behavior. The code includes features for data preprocessing, ensuring clean data is ready for analysis. It extracts relevant metrics such as CPU usage, memory consumption, and disk activity. 
                                             Anomaly detection algorithms are then applied to pinpoint abnormal server behavior and display relevant information to the user. This code strengthens the reliability of our data. 
                                         </p>
                                         <p>Times to Run: </p>
@@ -331,13 +331,35 @@
                     <input id= "alg_end" type="date" value=""></input>
                 </div>
                 <div>
+                    <label>Server Name:</label>
+                    <select id="server_name">
+                        <option value="">None</option>
+                        <option value="49y0s4e6yi.example.com">49y0s4e6yi.example.com</option>
+                        <option value="5qt5vq4lhk.example.com">5qt5vq4lhk.example.com</option>
+                        <option value="y53b7oyu60.example.com">y53b7oyu60.example.com</option>
+                        <option value="60akv51096.example.com">60akv51096.example.com</option>
+                        <option value="t23kn15n9k.example.com">t23kn15n9k.example.com</option>
+                        <option value="h8821wfs83.example.com">h8821wfs83.example.com</option>
+                        <option value="zlc9q3dcp7.example.com">zlc9q3dcp7.example.com</option>
+                        <option value="1kzpunn1iw.example.com">1kzpunn1iw.example.com</option>
+                        <option value="j46j4n1xml.example.com">j46j4n1xml.example.com</option>
+                        <option value="cznin5g469.example.com">cznin5g469.example.com</option>
+                        <option value="c2vc4969gj.example.com">67ets55ob3.example.com</option>
+                        <option value="97ekboq789.example.com">97ekboq789.example.com</option>
+                        <option value="f9331yazk8.example.com">f9331yazk8.example.com</option>
+                        <option value="6791f1cdq2.example.com">6791f1cdq2.example.com</option>
+                        <option value="17s00f3p1p.example.com">17s00f3p1p.example.com</option>
+                        <option value="4p9xf6q09j.example.com">4p9xf6q09j.example.com</option>
+                    </select>
+                </div>
+                <div>
                     <label id="label_time_granularity">Time Granularity</label>
                     <select name="options_time_granularity" id="time_granularity">
+                        <option value="0.50">30 min</option>
                         <option value="0.0833333">5 min</option>
                         <option value="0.166667">10 min</option>
                         <option value="0.25">15 min</option>
                         <option value="0.333333">20 min</option>
-                        <option value="0.50">30 min</option>
                         <option value="1">1 hr</option>
                         <option value="1.5">1.5 hr</option>
                         <option value="2">2 hr</option>
@@ -496,6 +518,18 @@
                                     <option value="exportforuconn">exportforuconn</option>
                                     <option value="exportforuconn2">exportforuconn2</option>
                                 </select>
+                                <label>Server Name:</label>
+                                <select id="server_name2">
+                                    <option value="">None</option>
+                                    <option value="49y0s4e6yi.example.com">49y0s4e6yi.example.com</option>
+                                    <option value="1kzpunn1iw.example.com">1kzpunn1iw.example.com</option>
+                                    <option value="y53b7oyu60.example.com">y53b7oyu60.example.com</option>
+                                    <option value="60akv51096.example.com">60akv51096.example.com</option>
+                                    <option value="zlc9q3dcp7.example.com">zlc9q3dcp7.example.com</option>
+                                    <option value="cznin5g469.example.com">cznin5g469.example.com</option>
+                                    <option value="c2vc4969gj.example.com">67ets55ob3.example.com</option>
+                                    <option value="f9331yazk8.example.com">f9331yazk8.example.com</option>
+                                </select>
                                 <div>
                                     <button type="button" onclick="runAnomaly()">Run Algorithm</button>
                                 </div>
@@ -562,7 +596,7 @@
                 <div class="tab-content" id="aboutTabContent">
                     <!-- Area 1 content -->
                     <div class="tab-pane fade show active" id="a-area1" role="tabpanel" aria-labelledby="a-area1-tab">
-                        <h2>About Us</h2>
+                        <h2>About Team 16</h2>
                         <div class="container">
                             <!-- Person 1 -->
                             <div class="person">
@@ -637,11 +671,11 @@
                     </div>
                     <div class="tab-pane fade" id="a-area3" role="tabpanel" aria-labelledby="a-area3-tab">
                         <h2>What's Next?</h2>
-                        <p>If given additional time we would have liked to make the schedules produced by the models be able to tell you if each indivudal server
-                            should be on or off given a certain time. The way the models work now, we are averaging the CPU Usage of every server and building one singular model in order
-                            to predict the next times that all these servers will have a certain CPU usage. Thus in the future we would like to either build indivudal servers for each model to produce
-                            a seperate and accurate schedule for each server. Or we would like to be able to scan the dataset for each server and see if it is under or over our threshold produced by the models. 
-                            This would allow us to give Lockheed a specifc number of servers that should be on at a time.
+                        <p>Given additional time, we would have liked to create a schedule for each individual server, displaying whether or not it should be on/off at 
+                            certain times. We implemented this functionality for a handful of servers, scratching the surface of the total available results we could obtain
+                            from our algorithms.In the future, we would like to have each model produce a separate and accurate schedule for each server to be compared with each other 
+                            or scan the dataset for each server and check if it is above or below our threshold calculated by the models. This functionality would allow us to provide 
+                            a specific number of servers that should be on at any time.
                         </p>
                     </div>
 
@@ -896,6 +930,8 @@
 
             document.getElementById('algSchedule').style.visibility = 'hidden';
 
+            const servername = document.getElementById('server_name').value;
+
 
             if (selectedAlgorithm === 'ProphetModel') {
                 fetch('/run-prophet', {
@@ -903,7 +939,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file, start_time, end_time})
+                body: JSON.stringify({data_file, start_time, end_time, servername})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
@@ -935,7 +971,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file, start_time, end_time, time_granularity})
+                body: JSON.stringify({data_file, start_time, end_time, time_granularity, servername})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
@@ -983,7 +1019,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file, start_time, end_time, time_granularity})
+                body: JSON.stringify({data_file, start_time, end_time, time_granularity, servername})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
@@ -1075,6 +1111,8 @@
             document.getElementById('anm_header4').style.visibility = 'hidden';
             document.getElementById('anm_header5').style.visibility = 'hidden';
 
+            const servername2 = document.getElementById("server_name2").value;
+
             const data_file = document.getElementById('anm_data_file').value;
 
             fetch('/run-anomaly', {
@@ -1082,7 +1120,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({data_file})
+                body: JSON.stringify({data_file, servername2})
                 })
                 .then(response => response.json()) // Assuming your server returns JSON
                 .then(data => {
