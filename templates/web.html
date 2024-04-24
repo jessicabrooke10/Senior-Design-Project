@@ -249,14 +249,16 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Algorithm Analysis Tab</strong></p>
-                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph, which predicts CPU usage of all servers at specified times. Next, it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
-                                            The way this works is if the predicted CPU usage at a certain time is under the threshold, the server will be turned off, otherwise it will be turned on. To help the user choose a threshold value, we prepopulated the input value with the median of all predicted CPU values that the models came up with. 
-                                            As the threshold changes so does the schedule. Lastly, the user may be able to input a CSV file so we may come up with different schedules based on the information provided. </p>
-                                        <p> For the LSTM & Prophet Model we also allow the user to choose the time granularity, which offers the users to have the models make predictions based on grouped sets of instants
-                                            from a time domain. (Ex. Every 5minutes, hour, or daily)
+                                        <p>Click on the algorithm analysis tab to select one of our three different models. Each model will provide you with a graph that predicts the CPU usage of servers at specified times. Before pressing the submit button you will be prompted to enter a data file, start/end date, and a server name which each algorithm will use to come up with its predicted CPU usage for servers.
+                                        It is important to note that if you select the server name as none, all servers provided in the data file will be aggregated as one, and you will see predicted CPU usage based on all servers (combined into one).
+                                        Next, it will ask you for a threshold, which is used to calculate a schedule that determines whether Lockheed's servers should be turned on or off. 
+                                        The way this works is if the predicted CPU usage at a certain time is under the threshold, the server will be turned off, otherwise it will be turned on. To help the user choose a threshold value, we prepopulated the input value with the median of all predicted CPU values that the models came up with. 
+                                        As the threshold changes so does the schedule. Lastly, the user may be able to input a CSV file so we may come up with different schedules based on the information provided. </p>
+                                        <p> For the LSTM & Prophet Model we also allow the user to choose the time granularity which allows the users to have the models make predictions based on grouped sets of instants
+                                        from a time domain. (Ex. Every 5minutes, hourly, daily)
                                         </p>
                                         <p> Note that the LSTM & Prophet Model produce schedules that tell the user when ALL servers should be on or off during a specific time. The Seasonal Decomposition Model schedule only has two values,
-                                            that dictate a change of state from on to off or off to on.</p>
+                                        that dictate a change of state from on to off or off to on.</p>
                                         <p>Times to Run: </p>
                                         <p class="indented2">Seasonal Decomposition Model: 3.48 seconds</p>
                                         <p class="indented2">LSTM Model: 2 minutes</p>
@@ -266,10 +268,10 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <p><strong>Cluster Tab</strong></p>
-                                        <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, a end time, and a time_granularity (groups data based on time the user chose, ex.hourly). Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
-                                            group servers together based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next, based on these groupings, a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
+                                        <p>Click on the clustering tab and select a date range including the day you would like to see, a start time, an end time, and a time_granularity (groups data based on time the user chose, ex.hourly). Then choose a data file that you would like the clustering algorithm to use. After selecting your chosen values from these options the clustering algorithm will
+                                            group together servers based on their CPU usage at the specified time. Each point on the graph represents a server, each color represents a group. Next, based on these groupings a user can choose a threshold value (a CPU percentage) which will generate a schedule of whether certain servers should be on or off during a specified time.
                                             To help the user choose a threshold value, we prepopulated the input with the median values across all clusters. Using the threshold value the schedule will either turn on the group of servers if their CPU percentage is higher than the threshold or turn it off otherwise. Lastly, since
-                                            the clustering algorithm groups servers together, to find the servers in each group you can select the group number and a table will display the server belonging to that group.
+                                            the clustering algorithm groups servers together, to find the servers in each group you can select the group number, and a table will display the server belonging to that group.
                                         </p>
                                         <p>Times to Run: </p>
                                         <p class="indented2">Clustering Graph: 24 seconds</p>
@@ -289,11 +291,10 @@
                                     <div class="col-md-12">
                                         <p><strong>About Tab</strong></p>
                                         <p>
-                                            Click on the about tab to find out more about our group and project details.
+                                            Click on the About tab to find out more about our group and project details.
                                         </p>
                                     </div>
                                 </div>
-
                             </div> <!-- Area 3 ends -->
                         </div>
                     </div>
@@ -673,7 +674,7 @@
                         <h2>What's Next?</h2>
                         <p>Given additional time, we would have liked to create a schedule for each individual server, displaying whether or not it should be on/off at 
                             certain times. We implemented this functionality for a handful of servers, scratching the surface of the total available results we could obtain
-                            from our algorithms.In the future, we would like to have each model produce a separate and accurate schedule for each server to be compared with each other 
+                            from our algorithms. In the future, we would like to have each model produce a separate and accurate schedule for each server to be compared with each other 
                             or scan the dataset for each server and check if it is above or below our threshold calculated by the models. This functionality would allow us to provide 
                             a specific number of servers that should be on at any time.
                         </p>
