@@ -505,8 +505,6 @@ def generate_seasonaldecomposition(data_file, start_time, end_time, time_granula
     plt.close()
 
     mean_pred = np.mean(forecast_series)
-    os.remove("aggregated_clean_andy.csv")
-    os.remove("granular_data_andy.csv")
 
     return plot_base64_1, mean_pred, forecast_series
 
@@ -744,6 +742,26 @@ Y_Pred = None
 timestmaps2 = None
 test_single_ts = None
 indiv_check = True
+result = None
+
+def initial():
+    global result
+    if os.path.exists('by_half_hour.csv'):
+        pass
+    else:
+        editor1("exportforuconn.csv", "flipflap.csv")
+        half_hour_agg("flipflap.csv", "by_half_hour.csv")
+
+    df = pd.read_csv("by_half_hour.csv",  parse_dates=True)
+    cpu_data = df["Avg_CPU_95"].tolist()
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+
+    train, test_loader, split, sequence_length = prepare_data(cpu_data, sequence_length=12, train_test_split=.75)
+    model = LSTMModel(hidden_layer_size=50)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.0001)
+
+    result = Training(model, optimizer, train, num_epochs=25)
 
 # Generate LSTM (Long Short-Term Memory) Plots
 def generate_lstm(data_file, start_time, end_time, time_granularity, servername):
@@ -752,6 +770,7 @@ def generate_lstm(data_file, start_time, end_time, time_granularity, servername)
     global test_single_ts
     global timestamps2
     global indiv_check
+    global result
 
     if os.path.exists('by_half_hour.csv'):
         pass
@@ -762,18 +781,7 @@ def generate_lstm(data_file, start_time, end_time, time_granularity, servername)
     editor1(data_file+".csv", "flipflap.csv")
     aggregate_data(filepath="flipflap.csv", time_period=time_granularity, exportname="LSTM_by_time_period.csv")
 
-    df = pd.read_csv("by_half_hour.csv",  parse_dates=True)
-    timestamp_list = df["Timestamp"].tolist()
-    timestamps = pd.to_datetime(timestamp_list)
-    cpu_data = df["Avg_CPU_95"].tolist()
-
     scaler = MinMaxScaler(feature_range=(0, 1))
-
-    train, test_loader, split, sequence_length = prepare_data(cpu_data, sequence_length=12, train_test_split=.75)
-    model = LSTMModel(hidden_layer_size=50)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.0001)
-
-    result = Training(model, optimizer, train, num_epochs=25)
 
     df2 = pd.read_csv('LSTM_by_time_period.csv',  parse_dates=True)
     timestamps2_list = df2["Timestamp"].tolist()
@@ -1372,4 +1380,7 @@ def home():
     return render_template('web.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)    
+
+    initial()
+
+    app.run(debug=False)    
